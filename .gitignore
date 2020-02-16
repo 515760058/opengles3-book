@@ -5,10 +5,10 @@ profile
 *~.nib
 
 
-
+.vs
 DerivedData/
 build/
-
+out/
 
 
 *.pbxuser
