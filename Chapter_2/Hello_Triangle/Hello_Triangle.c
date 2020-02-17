@@ -47,7 +47,7 @@ typedef struct
 ///
 // Create a shader object, load the shader source, and
 // compile the shader.
-//
+// 创建、加载并且编译一个着色器
 GLuint LoadShader ( GLenum type, const char *shaderSrc )
 {
    GLuint shader;
@@ -102,19 +102,19 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    char vShaderStr[] =
       "#version 300 es                          \n"
-      "layout(location = 0) in vec4 vPosition;  \n"
+      "layout(location = 0) in vec4 vPosition;  \n"//输入的定点属性，location=0
       "void main()                              \n"
       "{                                        \n"
-      "   gl_Position = vPosition;              \n"
+      "   gl_Position = vPosition;              \n"//直接输出
       "}                                        \n";
 
    char fShaderStr[] =
       "#version 300 es                              \n"
-      "precision mediump float;                     \n"
-      "out vec4 fragColor;                          \n"
+      "precision mediump float;                     \n"//精度限定
+      "out vec4 fragColor;                          \n"//输出的颜色
       "void main()                                  \n"
       "{                                            \n"
-      "   fragColor = vec4 ( 1.0, 0.0, 0.0, 1.0 );  \n"
+      "   fragColor = vec4 ( 1.0, 0.0, 0.0, 1.0 );  \n"// R G B A  红色
       "}                                            \n";
 
    GLuint vertexShader;
@@ -123,21 +123,25 @@ int Init ( ESContext *esContext )
    GLint linked;
 
    // Load the vertex/fragment shaders
+   //加载顶点和片段着色器
    vertexShader = LoadShader ( GL_VERTEX_SHADER, vShaderStr );
    fragmentShader = LoadShader ( GL_FRAGMENT_SHADER, fShaderStr );
 
    // Create the program object
+   //创建(着色器)程序对象
    programObject = glCreateProgram ( );
 
    if ( programObject == 0 )
    {
       return 0;
    }
-
+   //将shader添加到程序对象中
+   //这时的shader不一定需要被编译，他们甚至不需要包含任何的代码。我们要做的只是将shader容器添加到程序中。
    glAttachShader ( programObject, vertexShader );
    glAttachShader ( programObject, fragmentShader );
 
    // Link the program
+   //在链接操作执行以后，可以任意修改shader的源代码，对shader重新编译不会影响整个程序，除非重新链接程序。
    glLinkProgram ( programObject );
 
    // Check the link status
@@ -165,8 +169,8 @@ int Init ( ESContext *esContext )
 
    // Store the program object
    userData->programObject = programObject;
-
-   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
+   
+   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );//R G B A 白色
    return TRUE;
 }
 
@@ -176,24 +180,27 @@ int Init ( ESContext *esContext )
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
-   GLfloat vVertices[] = {  0.0f,  0.5f, 0.0f,
-                            -0.5f, -0.5f, 0.0f,
-                            0.5f, -0.5f, 0.0f
+   GLfloat vVertices[] = {  0.0f,  0.5f, 0.0f, //中上
+                            -0.5f, -0.5f, 0.0f,//左下
+                            0.5f, -0.5f, 0.0f  //右下
                          };
 
    // Set the viewport
+   //视口
    glViewport ( 0, 0, esContext->width, esContext->height );
 
    // Clear the color buffer
    glClear ( GL_COLOR_BUFFER_BIT );
 
    // Use the program object
+   //加载并使用链接好的程序
+   //如果将program设置为0，表示使用固定功能管线。如果程序已经在使用的时候，对程序进行重新编译，编译后的应用程序会自动替代以前的那个被调用
    glUseProgram ( userData->programObject );
 
    // Load the vertex data
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vVertices );
    glEnableVertexAttribArray ( 0 );
-
+   //渲染 三角形图元 三个顶点
    glDrawArrays ( GL_TRIANGLES, 0, 3 );
 }
 
@@ -206,8 +213,9 @@ void Shutdown ( ESContext *esContext )
 
 int esMain ( ESContext *esContext )
 {
+    //为自定义的userData类型分配内存
    esContext->userData = malloc ( sizeof ( UserData ) );
-
+   //通过egl创建窗口
    esCreateWindow ( esContext, "Hello Triangle", 320, 240, ES_WINDOW_RGB );
 
    if ( !Init ( esContext ) )
@@ -216,6 +224,7 @@ int esMain ( ESContext *esContext )
    }
 
    esRegisterShutdownFunc ( esContext, Shutdown );
+   //注册绘图回调函数，退出esMain之后，框架将循环调用注册的Draw和Update，直到窗口关闭
    esRegisterDrawFunc ( esContext, Draw );
 
    return GL_TRUE;

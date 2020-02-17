@@ -103,6 +103,7 @@ struct ESContext
    void       *platformData;
 
    /// Put your user data here...
+   //根据每个程序例子，自定义的类型。因此只保留一个void *的指针
    void       *userData;
 
    /// Window width
