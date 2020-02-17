@@ -33,7 +33,7 @@
 //
 //    This example demonstrates drawing a primitive with
 //    Vertex Array Objects (VAOs)
-//
+//  书6.4节
 #include "esUtil.h"
 
 typedef struct
@@ -114,10 +114,11 @@ int Init ( ESContext *esContext )
 
    // Generate VBO Ids and load the VBOs with data
    glGenBuffers ( 2, userData->vboIds );
-
+   //顶点缓冲区对象VBO（位置+颜色），申请GPU缓冲区内存，指定数据地址
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glBufferData ( GL_ARRAY_BUFFER, sizeof ( vertices ),
                   vertices, GL_STATIC_DRAW );
+   //顶点缓冲区对象VBO（索引），申请GPU缓冲区内存，指定数据地址
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
    glBufferData ( GL_ELEMENT_ARRAY_BUFFER, sizeof ( indices ),
                   indices, GL_STATIC_DRAW );
@@ -125,10 +126,13 @@ int Init ( ESContext *esContext )
    // Generate VAO Id
    glGenVertexArrays ( 1, &userData->vaoId );
 
-   // Bind the VAO and then setup the vertex
-   // attributes
+   // Bind the VAO and then setup the vertex attributes
+   //绑定VAO, 然后设置的VBO所有状态，都会包含在这个VAO中
    glBindVertexArray ( userData->vaoId );
-
+   //对VBO的 位置+颜色 和 索引 进行操作（状态都保存在VAO中）：
+   // 1, 绑定缓冲区,
+   // 2, 使能顶点数组
+   // 3, 上传相应的数据（注意偏移）
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
 
@@ -142,7 +146,7 @@ int Init ( ESContext *esContext )
                            GL_FLOAT, GL_FALSE, VERTEX_STRIDE,
                            ( const void * ) ( VERTEX_POS_SIZE * sizeof ( GLfloat ) ) );
 
-   // Reset to the default VAO
+   // Reset to the default VAO  重置VA0的绑定
    glBindVertexArray ( 0 );
 
    glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
@@ -158,12 +162,13 @@ void Draw ( ESContext *esContext )
    glUseProgram ( userData->programObject );
 
    // Bind the VAO
+   // 直接绑定这个VA0,就能恢复VA0所记录的 位置+颜色 和 索引 的状态
    glBindVertexArray ( userData->vaoId );
 
-   // Draw with the VAO settings
+   // Draw with the VAO settings  使用VAO(所记录的状态)来渲染
    glDrawElements ( GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, ( const void * ) 0 );
 
-   // Return to the default VAO
+   // Return to the default VAO  重置VA0的绑定
    glBindVertexArray ( 0 );
 }
 

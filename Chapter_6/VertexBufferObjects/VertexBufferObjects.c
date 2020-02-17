@@ -33,7 +33,7 @@
 //
 //    This example demonstrates drawing a primitive with
 //    and without Vertex Buffer Objects (VBOs)
-//
+//  书6.3节
 #include "esUtil.h"
 
 typedef struct
@@ -64,13 +64,13 @@ int Init ( ESContext *esContext )
       "#version 300 es                            \n"
       "layout(location = 0) in vec4 a_position;   \n"
       "layout(location = 1) in vec4 a_color;      \n"
-      "uniform float u_offset;                    \n"
+      "uniform float u_offset;                    \n"//统一变量u_offset
       "out vec4 v_color;                          \n"
       "void main()                                \n"
       "{                                          \n"
       "    v_color = a_color;                     \n"
       "    gl_Position = a_position;              \n"
-      "    gl_Position.x += u_offset;             \n"
+      "    gl_Position.x += u_offset;             \n"//在x轴上平移u_offset个单位
       "}";
 
 
@@ -88,7 +88,7 @@ int Init ( ESContext *esContext )
 
    // Create the program object
    programObject = esLoadProgram ( vShaderStr, fShaderStr );
-
+   //获得统一变量的location
    userData->offsetLoc = glGetUniformLocation ( programObject, "u_offset" );
 
    if ( programObject == 0 )
@@ -118,23 +118,24 @@ void DrawPrimitiveWithoutVBOs ( GLfloat *vertices,
                                 GLint numIndices,
                                 GLushort *indices )
 {
-   GLfloat   *vtxBuf = vertices;
+   GLfloat   *vtxBuf = vertices;//顶点位置数据的起始地址
 
    glBindBuffer ( GL_ARRAY_BUFFER, 0 );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, 0 );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
-
+   //上传顶点位置数据
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            vtxBuf );
+   //顶点颜色数据的起始地址
    vtxBuf += VERTEX_POS_SIZE;
-
+   //上传顶点颜色数据
    glVertexAttribPointer ( VERTEX_COLOR_INDX,
                            VERTEX_COLOR_SIZE, GL_FLOAT,
                            GL_FALSE, vtxStride, vtxBuf );
-
+   //根据顶点索引数据，渲染
    glDrawElements ( GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT,
                     indices );
 
@@ -143,6 +144,7 @@ void DrawPrimitiveWithoutVBOs ( GLfloat *vertices,
 
 }
 
+//类似于例子6-6
 void DrawPrimitiveWithVBOs ( ESContext *esContext,
                              GLint numVertices, GLfloat *vtxBuf,
                              GLint vtxStride, GLint numIndices,
@@ -157,10 +159,11 @@ void DrawPrimitiveWithVBOs ( ESContext *esContext,
    {
       // Only allocate on the first draw
       glGenBuffers ( 2, userData->vboIds );
-
+      //顶点位置和颜色 申请GPU内存缓冲区，指定顶点数据的地址
       glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
       glBufferData ( GL_ARRAY_BUFFER, vtxStride * numVertices,
                      vtxBuf, GL_STATIC_DRAW );
+      //顶点索引 申请GPU内存缓冲区，指定顶点索引数据的地址
       glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
       glBufferData ( GL_ELEMENT_ARRAY_BUFFER,
                      sizeof ( GLushort ) * numIndices,
@@ -169,23 +172,23 @@ void DrawPrimitiveWithVBOs ( ESContext *esContext,
 
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
-
+   //上传顶点位置的数据 注意offset=0
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            ( const void * ) offset );
-
+   //上传顶点颜色的数据 注意offset
    offset += VERTEX_POS_SIZE * sizeof ( GLfloat );
    glVertexAttribPointer ( VERTEX_COLOR_INDX,
                            VERTEX_COLOR_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            ( const void * ) offset );
-
+   //根据顶点索引来渲染  最后的0表示对索引数据的地址偏移
    glDrawElements ( GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT,
                     0 );
-
+   //禁用顶点数组
    glDisableVertexAttribArray ( VERTEX_POS_INDX );
    glDisableVertexAttribArray ( VERTEX_COLOR_INDX );
 
@@ -198,6 +201,7 @@ void Draw ( ESContext *esContext )
    UserData *userData = esContext->userData;
 
    // 3 vertices, with (x,y,z) ,(r, g, b, a) per-vertex
+   // 注意三角形顶点的位置在左侧，在着色器中根据u_offset往右平移
    GLfloat vertices[3 * ( VERTEX_POS_SIZE + VERTEX_COLOR_SIZE )] =
    {
       -0.5f,  0.5f, 0.0f,        // v0
@@ -213,13 +217,15 @@ void Draw ( ESContext *esContext )
    glViewport ( 0, 0, esContext->width, esContext->height );
    glClear ( GL_COLOR_BUFFER_BIT );
    glUseProgram ( userData->programObject );
+   //给统一变量u_offset赋值
    glUniform1f ( userData->offsetLoc, 0.0f );
-
+   // 第一次渲染的三角形在左侧
    DrawPrimitiveWithoutVBOs ( vertices,
                               sizeof ( GLfloat ) * ( VERTEX_POS_SIZE + VERTEX_COLOR_SIZE ),
                               3, indices );
 
    // Offset the vertex positions so both can be seen
+   //给统一变量u_offset赋值，然后再次渲染三角形就往右平移一个单位
    glUniform1f ( userData->offsetLoc, 1.0f );
 
    DrawPrimitiveWithVBOs ( esContext, 3, vertices,
@@ -232,7 +238,7 @@ void Shutdown ( ESContext *esContext )
    UserData *userData = esContext->userData;
 
    glDeleteProgram ( userData->programObject );
-   glDeleteBuffers ( 2, userData->vboIds );
+   glDeleteBuffers ( 2, userData->vboIds );//删除两个缓冲区对象
 }
 
 int esMain ( ESContext *esContext )

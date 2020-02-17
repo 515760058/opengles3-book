@@ -111,14 +111,14 @@ void Draw ( ESContext *esContext )
    glUseProgram ( userData->programObject );
    //顶点数组
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vertexPos );
-   glEnableVertexAttribArray ( 0 );
+   glEnableVertexAttribArray ( 0 );//启用顶点属性数组
    //设置 常量顶点属性：对于一个图元的所有顶点都相同
    glVertexAttrib4fv ( 1, color );//顶点着色器中颜色属性a_color 的 location=1
 
 
    glDrawArrays ( GL_TRIANGLES, 0, 3 );
 
-   glDisableVertexAttribArray ( 0 );
+   glDisableVertexAttribArray ( 0 );//禁用顶点属性数组
 }
 
 void Shutdown ( ESContext *esContext )

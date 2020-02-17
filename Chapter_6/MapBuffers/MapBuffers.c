@@ -32,7 +32,7 @@
 // MapBuffers.c
 //
 //    This example demonstrates mapping buffer objects
-//  书本6.5节
+//  书本6.5节 映射缓冲区对象：将gpu内存映射到应用程序地址空间，从而可以对该内存直接操作。
 #include "esUtil.h"
 #include <string.h>
 
@@ -112,16 +112,16 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
    // vboIds[l] - used to store element indices
    if ( userData->vboIds[0] == 0 && userData->vboIds[1] == 0 )
    {
-      GLfloat *vtxMappedBuf;
-      GLushort *idxMappedBuf;
+      GLfloat *vtxMappedBuf;//保存映射到应用程序端的地址
+      GLushort *idxMappedBuf;//保存映射到应用程序端的地址
 
       // Only allocate on the first draw
       glGenBuffers ( 2, userData->vboIds );
-
+      //申请GPU内存用于存放顶点(位置+颜色)数据，注意参数NULL
       glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
       glBufferData ( GL_ARRAY_BUFFER, vtxStride * numVertices,
                      NULL, GL_STATIC_DRAW );
-
+      //将GPU内存映射到应用程序地址空间
       vtxMappedBuf = ( GLfloat * )
                      glMapBufferRange ( GL_ARRAY_BUFFER, 0, vtxStride * numVertices,
                                         GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT );
@@ -132,10 +132,11 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
          return;
       }
 
-      // Copy the data into the mapped buffer
+      // Copy the data into the mapped buffer 上传数据：将顶点属性数据复制到GPU内存中
       memcpy ( vtxMappedBuf, vtxBuf, vtxStride * numVertices );
 
       // Unmap the buffer
+      // 取消映射，会刷新整个映射范围的内存，（潜在的性能损失）
       if ( glUnmapBuffer ( GL_ARRAY_BUFFER ) == GL_FALSE )
       {
          esLogMessage ( "Error unmapping array buffer object." );
@@ -143,10 +144,12 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
       }
 
       // Map the index buffer
+      // 申请GPU内存用于存放顶点索引数据，注意参数NULL，
       glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
       glBufferData ( GL_ELEMENT_ARRAY_BUFFER,
                      sizeof ( GLushort ) * numIndices,
                      NULL, GL_STATIC_DRAW );
+      //将GPU内存映射到应用程序地址空间
       idxMappedBuf = ( GLushort * )
                      glMapBufferRange ( GL_ELEMENT_ARRAY_BUFFER, 0, sizeof ( GLushort ) * numIndices,
                                         GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT );
@@ -157,10 +160,12 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
          return;
       }
 
-      // Copy the data into the mapped buffer
+      // Copy the data into the mapped buffer 上传数据：将顶点索引数据复制到GPU内存中
       memcpy ( idxMappedBuf, indices, sizeof ( GLushort ) * numIndices );
 
       // Unmap the buffer
+      // 取消映射，会刷新整个映射范围的内存，（潜在的性能损失）
+      if (glUnmapBuffer(GL_ARRAY_BUFFER) == GL_FALSE)
       if ( glUnmapBuffer ( GL_ELEMENT_ARRAY_BUFFER ) == GL_FALSE )
       {
          esLogMessage ( "Error unmapping element array buffer object." );
@@ -170,23 +175,23 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
 
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
-
+   // 使能顶点数组
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
-
+   // 顶点位置属性，在GPU缓冲区中的的偏移offset
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            ( const void * ) offset );
-
+   // 顶点颜色属性，在GPU缓冲区中的的偏移offset
    offset += VERTEX_POS_SIZE * sizeof ( GLfloat );
    glVertexAttribPointer ( VERTEX_COLOR_INDX,
                            VERTEX_COLOR_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            ( const void * ) offset );
-
+   //根据索引数据 渲染
    glDrawElements ( GL_TRIANGLES, numIndices, GL_UNSIGNED_SHORT,
                     0 );
-
+   //禁用顶点数组
    glDisableVertexAttribArray ( VERTEX_POS_INDX );
    glDisableVertexAttribArray ( VERTEX_COLOR_INDX );
 
