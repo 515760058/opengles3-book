@@ -33,7 +33,7 @@
 //
 //    This example demonstrates drawing a primitive with
 //    a separate VBO per attribute
-//
+//  顶点缓冲对象
 #include "esUtil.h"
 
 typedef struct
@@ -160,14 +160,14 @@ void Draw ( ESContext *esContext )
    GLfloat vertexPos[3 * VERTEX_POS_SIZE] =
    {
       0.0f,  0.5f, 0.0f,        // v0
-      -0.5f, -0.5f, 0.0f,        // v1
+      -0.5f, -0.5f, 0.0f,       // v1
       0.5f, -0.5f, 0.0f         // v2
    };
    GLfloat color[4 * VERTEX_COLOR_SIZE] =
    {
-      1.0f, 0.0f, 0.0f, 1.0f,   // c0
-      0.0f, 1.0f, 0.0f, 1.0f,   // c1
-      0.0f, 0.0f, 1.0f, 1.0f    // c2
+      1.0f, 0.0f, 0.0f, 1.0f,   // c0 对应于v0 红色
+      0.0f, 1.0f, 0.0f, 1.0f,   // c1 对应于v1 绿色
+      0.0f, 0.0f, 1.0f, 1.0f    // c2 对应于v2 蓝色
    };
    GLint vtxStrides[2] =
    {

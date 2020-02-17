@@ -32,7 +32,7 @@
 // MapBuffers.c
 //
 //    This example demonstrates mapping buffer objects
-//
+//  Êé±¾6.5½Ú
 #include "esUtil.h"
 #include <string.h>
 

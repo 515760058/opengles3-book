@@ -197,7 +197,13 @@ void Draw ( ESContext *esContext )
    //如果将program设置为0，表示使用固定功能管线。如果程序已经在使用的时候，对程序进行重新编译，编译后的应用程序会自动替代以前的那个被调用
    glUseProgram ( userData->programObject );
 
-   // Load the vertex data
+   // Load the vertex data 顶点数组
+   // 第一个参数：在顶点着色器中，位置属性vPosition的location=0
+   // 第二个参数指定顶点属性大小
+   // 第三个参数指定数据类型。
+   // 第四个参数定义是否希望数据被标准化（归一化），只表示方向不表示大小。
+   // 第五个参数是步长（Stride）
+   // 第六个参数表示我们的位置数据在缓冲区起始位置的偏移量。
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vVertices );
    glEnableVertexAttribArray ( 0 );
    //渲染 三角形图元 三个顶点

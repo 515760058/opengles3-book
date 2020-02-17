@@ -33,7 +33,7 @@
 //
 //    This example demonstrates using client-side vertex arrays
 //    and a constant vertex attribute
-//
+//  （使用glVertexAttrib4fv设置常量顶点属性）
 #include "esUtil.h"
 
 typedef struct
@@ -52,8 +52,8 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    const char vShaderStr[] =
       "#version 300 es                            \n"
-      "layout(location = 0) in vec4 a_position;   \n"
-      "layout(location = 1) in vec4 a_color;      \n"
+      "layout(location = 0) in vec4 a_position;   \n"//顶点的位置属性 location=0
+      "layout(location = 1) in vec4 a_color;      \n"//顶点的颜色属性 location=1
       "out vec4 v_color;                          \n"
       "void main()                                \n"
       "{                                          \n"
@@ -65,8 +65,8 @@ int Init ( ESContext *esContext )
    const char fShaderStr[] =
       "#version 300 es            \n"
       "precision mediump float;   \n"
-      "in vec4 v_color;           \n"
-      "out vec4 o_fragColor;      \n"
+      "in vec4 v_color;           \n"//输入的片段颜色 v_color要和顶点着色器输出v_color保持一致
+      "out vec4 o_fragColor;      \n"//输出的片段颜色
       "void main()                \n"
       "{                          \n"
       "    o_fragColor = v_color; \n"
@@ -95,7 +95,7 @@ int Init ( ESContext *esContext )
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
-   GLfloat color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+   GLfloat color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };//灰色
    // 3 vertices, with (x,y,z) per-vertex
    GLfloat vertexPos[3 * 3] =
    {
@@ -109,10 +109,11 @@ void Draw ( ESContext *esContext )
    glClear ( GL_COLOR_BUFFER_BIT );
 
    glUseProgram ( userData->programObject );
-
+   //顶点数组
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vertexPos );
    glEnableVertexAttribArray ( 0 );
-   glVertexAttrib4fv ( 1, color );
+   //设置 常量顶点属性：对于一个图元的所有顶点都相同
+   glVertexAttrib4fv ( 1, color );//顶点着色器中颜色属性a_color 的 location=1
 
 
    glDrawArrays ( GL_TRIANGLES, 0, 3 );
@@ -129,8 +130,9 @@ void Shutdown ( ESContext *esContext )
 
 int esMain ( ESContext *esContext )
 {
+   // 给自定义的结构分配内存
    esContext->userData = malloc ( sizeof ( UserData ) );
-
+   //通过EGL创建窗口
    esCreateWindow ( esContext, "Example 6-3", 320, 240, ES_WINDOW_RGB );
 
    if ( !Init ( esContext ) )
@@ -139,6 +141,7 @@ int esMain ( ESContext *esContext )
    }
 
    esRegisterShutdownFunc ( esContext, Shutdown );
+   //注册绘图回调函数，退出esMain之后，框架将循环调用注册的Draw和Update，直到窗口关闭
    esRegisterDrawFunc ( esContext, Draw );
 
    return GL_TRUE;
