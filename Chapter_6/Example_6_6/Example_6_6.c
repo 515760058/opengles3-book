@@ -117,27 +117,27 @@ void DrawPrimitiveWithVBOs ( ESContext *esContext,
    {
       // Only allocate on the first draw
       glGenBuffers ( 3, userData->vboIds );
-      //顶点位置 申请GPU内存缓冲区，指定顶点位置数据的地址
+      //顶点位置 申请GPU内存缓冲区，上传顶点位置数据
       glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
       glBufferData ( GL_ARRAY_BUFFER, vtxStrides[0] * numVertices,
                      vtxBuf[0], GL_STATIC_DRAW );
-      //顶点颜色 申请GPU内存缓冲区，指定顶点颜色数据的地址
+      //顶点颜色 申请GPU内存缓冲区，上传顶点颜色数据
       glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[1] );
       glBufferData ( GL_ARRAY_BUFFER, vtxStrides[1] * numVertices,
                      vtxBuf[1], GL_STATIC_DRAW );
-      //顶点索引 申请GPU内存缓冲区，指定顶点索引数据的地址
+      //顶点索引 申请GPU内存缓冲区，上传顶点索引数据
       glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[2] );
       glBufferData ( GL_ELEMENT_ARRAY_BUFFER,
                      sizeof ( GLushort ) * numIndices,
                      indices, GL_STATIC_DRAW );
    }
 
-   // 使能顶点数组，上传顶点位置数据  最后的0表示对数据的地址偏移
+   // 使能顶点数组，指定顶点位置数据在缓冲区中的偏移  最后的0表示对数据的地址偏移
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStrides[0], 0 );
-   // 使能顶点数组，上传顶点颜色数据  最后的0表示对数据的地址偏移
+   // 使能顶点数组，指定顶点颜色数据在缓冲区中的偏移  最后的0表示对数据的地址偏移
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[1] );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
    glVertexAttribPointer ( VERTEX_COLOR_INDX,

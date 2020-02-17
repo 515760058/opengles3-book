@@ -200,10 +200,10 @@ void Draw ( ESContext *esContext )
    // Load the vertex data 顶点数组
    // 第一个参数：在顶点着色器中，位置属性vPosition的location=0
    // 第二个参数指定顶点属性大小
-   // 第三个参数指定数据类型。
-   // 第四个参数定义是否希望数据被标准化（归一化），只表示方向不表示大小。
+   // 第三个参数指定数据类型
+   // 第四个参数定义是否希望数据被标准化（归一化），只表示方向不表示大小
    // 第五个参数是步长（Stride）
-   // 第六个参数表示我们的位置数据在缓冲区起始位置的偏移量。
+   // 第六个参数表示数据的地址，当使用VBO时表示在缓冲区起始位置的偏移量
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vVertices );
    glEnableVertexAttribArray ( 0 );
    //渲染 三角形图元 三个顶点

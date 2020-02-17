@@ -114,11 +114,11 @@ int Init ( ESContext *esContext )
 
    // Generate VBO Ids and load the VBOs with data
    glGenBuffers ( 2, userData->vboIds );
-   //顶点缓冲区对象VBO（位置+颜色），申请GPU缓冲区内存，指定数据地址
+   //顶点缓冲区对象VBO（位置+颜色），申请GPU缓冲区内存，上传数据
    glBindBuffer ( GL_ARRAY_BUFFER, userData->vboIds[0] );
    glBufferData ( GL_ARRAY_BUFFER, sizeof ( vertices ),
                   vertices, GL_STATIC_DRAW );
-   //顶点缓冲区对象VBO（索引），申请GPU缓冲区内存，指定数据地址
+   //顶点缓冲区对象VBO（索引），申请GPU缓冲区内存，上传数据
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->vboIds[1] );
    glBufferData ( GL_ELEMENT_ARRAY_BUFFER, sizeof ( indices ),
                   indices, GL_STATIC_DRAW );
@@ -138,10 +138,10 @@ int Init ( ESContext *esContext )
 
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
-
+   // 指定顶点位置属性，在GPU缓冲区中的的偏移offset
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, VERTEX_STRIDE, ( const void * ) 0 );
-
+   // 指定顶点颜色属性，在GPU缓冲区中的的偏移offset
    glVertexAttribPointer ( VERTEX_COLOR_INDX, VERTEX_COLOR_SIZE,
                            GL_FLOAT, GL_FALSE, VERTEX_STRIDE,
                            ( const void * ) ( VERTEX_POS_SIZE * sizeof ( GLfloat ) ) );

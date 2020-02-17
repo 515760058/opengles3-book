@@ -178,7 +178,7 @@ void DrawPrimitiveWithVBOsMapBuffers ( ESContext *esContext,
    // 使能顶点数组
    glEnableVertexAttribArray ( VERTEX_POS_INDX );
    glEnableVertexAttribArray ( VERTEX_COLOR_INDX );
-   // 顶点位置属性，在GPU缓冲区中的的偏移offset
+   // 指定顶点位置属性，在GPU缓冲区中的的偏移offset
    glVertexAttribPointer ( VERTEX_POS_INDX, VERTEX_POS_SIZE,
                            GL_FLOAT, GL_FALSE, vtxStride,
                            ( const void * ) offset );

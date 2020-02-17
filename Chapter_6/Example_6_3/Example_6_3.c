@@ -109,7 +109,7 @@ void Draw ( ESContext *esContext )
    glClear ( GL_COLOR_BUFFER_BIT );
 
    glUseProgram ( userData->programObject );
-   //顶点数组
+   //顶点数组（不使用VBO）
    glVertexAttribPointer ( 0, 3, GL_FLOAT, GL_FALSE, 0, vertexPos );
    glEnableVertexAttribArray ( 0 );//启用顶点属性数组
    //设置 常量顶点属性：对于一个图元的所有顶点都相同
