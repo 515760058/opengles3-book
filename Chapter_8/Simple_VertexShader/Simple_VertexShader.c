@@ -65,8 +65,8 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    const char vShaderStr[] =
       "#version 300 es                             \n"
-      "uniform mat4 u_mvpMatrix;                   \n"
-      "layout(location = 0) in vec4 a_position;    \n"
+      "uniform mat4 u_mvpMatrix;                   \n"// 统一变量
+      "layout(location = 0) in vec4 a_position;    \n"// 以常量顶点属性的方式赋值
       "layout(location = 1) in vec4 a_color;       \n"
       "out vec4 v_color;                           \n"
       "void main()                                 \n"
@@ -91,7 +91,7 @@ int Init ( ESContext *esContext )
    // Get the uniform locations
    userData->mvpLoc = glGetUniformLocation ( userData->programObject, "u_mvpMatrix" );
 
-   // Generate the vertex data
+   // Generate the vertex data  正方体： 顶点位置和索引数据
    userData->numIndices = esGenCube ( 1.0, &userData->vertices,
                                       NULL, NULL, &userData->indices );
 
@@ -105,7 +105,7 @@ int Init ( ESContext *esContext )
 
 ///
 // Update MVP matrix based on time
-//
+// 根据时间，计算旋转->model_view矩阵-->MVP矩阵
 void Update ( ESContext *esContext, float deltaTime )
 {
    UserData *userData = esContext->userData;
@@ -113,32 +113,29 @@ void Update ( ESContext *esContext, float deltaTime )
    ESMatrix modelview;
    float    aspect;
 
-   // Compute a rotation angle based on time to rotate the cube
+   // Compute a rotation angle based on time to rotate the cube 根据时间计算旋转角度
    userData->angle += ( deltaTime * 40.0f );
-
    if ( userData->angle >= 360.0f )
    {
       userData->angle -= 360.0f;
    }
-
+   // 处理project矩阵
    // Compute the window aspect ratio
    aspect = ( GLfloat ) esContext->width / ( GLfloat ) esContext->height;
-
    // Generate a perspective matrix with a 60 degree FOV
    esMatrixLoadIdentity ( &perspective );
    esPerspective ( &perspective, 60.0f, aspect, 1.0f, 20.0f );
 
+   // 处理medel view矩阵
    // Generate a model view matrix to rotate/translate the cube
-   esMatrixLoadIdentity ( &modelview );
-
-   // Translate away from the viewer
+   esMatrixLoadIdentity ( &modelview );//单位矩阵
+   // Translate away from the viewer  平移
    esTranslate ( &modelview, 0.0, 0.0, -2.0 );
-
-   // Rotate the cube
+   // Rotate the cube 旋转
    esRotate ( &modelview, userData->angle, 1.0, 0.0, 1.0 );
 
-   // Compute the final MVP by multiplying the
-   // modevleiw and perspective matrices together
+   // Compute the final MVP by multiplying the modevleiw and perspective matrices together
+   // 计算mvp = model_view * perspective
    esMatrixMultiply ( &userData->mvpMatrix, &modelview, &perspective );
 }
 
@@ -159,15 +156,16 @@ void Draw ( ESContext *esContext )
    glUseProgram ( userData->programObject );
 
    // Load the vertex position
+   // 指定顶点位置数据的地址，并使能顶点数组
    glVertexAttribPointer ( 0, 3, GL_FLOAT,
                            GL_FALSE, 3 * sizeof ( GLfloat ), userData->vertices );
-
    glEnableVertexAttribArray ( 0 );
 
    // Set the vertex color to red
+   // 把顶点的颜色属性 当做常量顶点属性（对个图元的所有顶点只需要设置一次）
    glVertexAttrib4f ( 1, 1.0f, 0.0f, 0.0f, 1.0f );
 
-   // Load the MVP matrix
+   // Load the MVP matrix  给顶点着色器中的统一变量mvp矩阵赋值
    glUniformMatrix4fv ( userData->mvpLoc, 1, GL_FALSE, ( GLfloat * ) &userData->mvpMatrix.m[0][0] );
 
    // Draw the cube

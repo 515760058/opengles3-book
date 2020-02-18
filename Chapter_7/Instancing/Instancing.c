@@ -33,7 +33,7 @@
 //
 //    Demonstrates drawing multiple objects in a single draw call with
 //    geometry instancing
-//
+// 书7.2.3节 几何形状实例化  一次调用，渲染多个实例
 #include <stdlib.h>
 #include <math.h>
 #include "esUtil.h"
@@ -63,7 +63,7 @@ typedef struct
    // Number of indices
    int       numIndices;
 
-   // Rotation angle
+   // Rotation angle 每个实例的旋转角度
    GLfloat   angle[NUM_INSTANCES];
 
 } UserData;
@@ -103,10 +103,12 @@ int Init ( ESContext *esContext )
    userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
 
    // Generate the vertex data
+   // 生成顶点位置数据vertices 和 顶点索引数据indices，返回索引的数量
    userData->numIndices = esGenCube ( 0.1f, &positions,
                                       NULL, NULL, &indices );
 
    // Index buffer object
+   // 使用缓冲区，上传索引数据
    glGenBuffers ( 1, &userData->indicesIBO );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->indicesIBO );
    glBufferData ( GL_ELEMENT_ARRAY_BUFFER, sizeof ( GLuint ) * userData->numIndices, indices, GL_STATIC_DRAW );
@@ -114,6 +116,7 @@ int Init ( ESContext *esContext )
    free ( indices );
 
    // Position VBO for cube model
+   // 使用VB0缓冲区，上传顶点位置数据
    glGenBuffers ( 1, &userData->positionVBO );
    glBindBuffer ( GL_ARRAY_BUFFER, userData->positionVBO );
    glBufferData ( GL_ARRAY_BUFFER, 24 * sizeof ( GLfloat ) * 3, positions, GL_STATIC_DRAW );
@@ -121,7 +124,7 @@ int Init ( ESContext *esContext )
 
    // Random color for each instance
    {
-      GLubyte colors[NUM_INSTANCES][4];
+      GLubyte colors[NUM_INSTANCES][4];//每个实例的颜色RGBA
       int instance;
 
       srandom ( 0 );
@@ -133,7 +136,7 @@ int Init ( ESContext *esContext )
          colors[instance][2] = random() % 255;
          colors[instance][3] = 0;
       }
-
+      // 上传每个实例的颜色数据
       glGenBuffers ( 1, &userData->colorVBO );
       glBindBuffer ( GL_ARRAY_BUFFER, userData->colorVBO );
       glBufferData ( GL_ARRAY_BUFFER, NUM_INSTANCES * 4, colors, GL_STATIC_DRAW );
@@ -144,11 +147,12 @@ int Init ( ESContext *esContext )
       int instance;
 
       // Random angle for each instance, compute the MVP later
+      // 每个实例的旋转角度（在update函数中每帧更新角度，影响model-view矩阵从而影响显示画面）
       for ( instance = 0; instance < NUM_INSTANCES; instance++ )
       {
          userData->angle[instance] = ( float ) ( random() % 32768 ) / 32767.0f * 360.0f;
       }
-
+      // 为每个实例的MVP矩阵申请GPU缓冲区内存
       glGenBuffers ( 1, &userData->mvpVBO );
       glBindBuffer ( GL_ARRAY_BUFFER, userData->mvpVBO );
       glBufferData ( GL_ARRAY_BUFFER, NUM_INSTANCES * sizeof ( ESMatrix ), NULL, GL_DYNAMIC_DRAW );
@@ -162,7 +166,7 @@ int Init ( ESContext *esContext )
 
 ///
 // Update MVP matrix based on time
-//
+// 根据时间deltaTime-->旋转角度-->model_view矩阵-->MVP矩阵， 更新每个实例的mvp矩阵
 void Update ( ESContext *esContext, float deltaTime )
 {
    UserData *userData = ( UserData * ) esContext->userData;
@@ -176,11 +180,12 @@ void Update ( ESContext *esContext, float deltaTime )
 
    // Compute the window aspect ratio
    aspect = ( GLfloat ) esContext->width / ( GLfloat ) esContext->height;
-
    // Generate a perspective matrix with a 60 degree FOV
+   // 生成 perspective矩阵
    esMatrixLoadIdentity ( &perspective );
    esPerspective ( &perspective, 60.0f, aspect, 1.0f, 20.0f );
 
+   // 把存放mvp的GPU缓冲区内存 映射到应用程序端
    glBindBuffer ( GL_ARRAY_BUFFER, userData->mvpVBO );
    matrixBuf = ( ESMatrix * ) glMapBufferRange ( GL_ARRAY_BUFFER, 0, sizeof ( ESMatrix ) * NUM_INSTANCES, GL_MAP_WRITE_BIT );
 
@@ -191,16 +196,17 @@ void Update ( ESContext *esContext, float deltaTime )
    for ( instance = 0; instance < NUM_INSTANCES; instance++ )
    {
       ESMatrix modelview;
+      // 根据实例所在的行列，计算它的x和y方向的位移，在[-1.0, 1.0]之间
       float translateX = ( ( float ) ( instance % numRows ) / ( float ) numRows ) * 2.0f - 1.0f;
       float translateY = ( ( float ) ( instance / numColumns ) / ( float ) numColumns ) * 2.0f - 1.0f;
 
-      // Generate a model view matrix to rotate/translate the cube
+      // Generate a model view matrix to rotate/translate the cube 初始化为单位矩阵
       esMatrixLoadIdentity ( &modelview );
 
-      // Per-instance translation
+      // Per-instance translation x和y方向的平移
       esTranslate ( &modelview, translateX, translateY, -2.0f );
 
-      // Compute a rotation angle based on time to rotate the cube
+      // Compute a rotation angle based on time to rotate the cube 根据deltaTime计算旋转角度
       userData->angle[instance] += ( deltaTime * 40.0f );
 
       if ( userData->angle[instance] >= 360.0f )
@@ -208,67 +214,72 @@ void Update ( ESContext *esContext, float deltaTime )
          userData->angle[instance] -= 360.0f;
       }
 
-      // Rotate the cube
+      // Rotate the cube 旋转
       esRotate ( &modelview, userData->angle[instance], 1.0, 0.0, 1.0 );
 
-      // Compute the final MVP by multiplying the
-      // modevleiw and perspective matrices together
+      // Compute the final MVP by multiplying the modevleiw and perspective matrices together
+      // 保存一个实例的MVP矩阵 mvp = modevleiw * perspective
       esMatrixMultiply ( &matrixBuf[instance], &modelview, &perspective );
    }
-
+   // 取消映射（刷新整个缓冲区）
    glUnmapBuffer ( GL_ARRAY_BUFFER );
 }
 
 ///
 // Draw a triangle using the shader pair created in Init()
-//
+// 渲染： 指定顶点位置，给每个实例指定颜色数据的偏移和mvp矩阵的偏移
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
 
-   // Set the viewport
+   // Set the viewport 视口
    glViewport ( 0, 0, esContext->width, esContext->height );
 
-   // Clear the color buffer
+   // Clear the color buffer 颜色和深度缓冲区，创建窗口surface的时候申请的（颜色和）深度缓冲区
    glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
    // Use the program object
    glUseProgram ( userData->programObject );
 
    // Load the vertex position
+   // 指定顶点位置数据在缓冲区中的偏移  并使能顶点数组
    glBindBuffer ( GL_ARRAY_BUFFER, userData->positionVBO );
    glVertexAttribPointer ( POSITION_LOC, 3, GL_FLOAT,
                            GL_FALSE, 3 * sizeof ( GLfloat ), ( const void * ) NULL );
    glEnableVertexAttribArray ( POSITION_LOC );
 
    // Load the instance color buffer
+   // 指定顶点颜色数据在缓冲区中的偏移  并使能顶点数组
    glBindBuffer ( GL_ARRAY_BUFFER, userData->colorVBO );
    glVertexAttribPointer ( COLOR_LOC, 4, GL_UNSIGNED_BYTE,
                            GL_TRUE, 4 * sizeof ( GLubyte ), ( const void * ) NULL );
    glEnableVertexAttribArray ( COLOR_LOC );
+   // 对每个实例，读取一次颜色属性  （重要）
    glVertexAttribDivisor ( COLOR_LOC, 1 ); // One color per instance
 
 
-   // Load the instance MVP buffer
+   // Load the instance MVP buffer  给每个实例，设置相应的MVP矩阵。 （一般渲染情况下是使用Simple_VertexShader例子中的uniform统一变量的方式给mvp矩阵赋值）
    glBindBuffer ( GL_ARRAY_BUFFER, userData->mvpVBO );
-
    // Load each matrix row of the MVP.  Each row gets an increasing attribute location.
+   // 指定每个MVP矩阵在缓冲区中的偏移（把mvp矩阵的每一行都看作是一种（顶点）属性，所以每一行的location都相应的增加1）
+   //                      location  属性大小 数据类型  归一化  步长stride            缓冲区中的偏移
    glVertexAttribPointer ( MVP_LOC + 0, 4, GL_FLOAT, GL_FALSE, sizeof ( ESMatrix ), ( const void * ) NULL );
    glVertexAttribPointer ( MVP_LOC + 1, 4, GL_FLOAT, GL_FALSE, sizeof ( ESMatrix ), ( const void * ) ( sizeof ( GLfloat ) * 4 ) );
    glVertexAttribPointer ( MVP_LOC + 2, 4, GL_FLOAT, GL_FALSE, sizeof ( ESMatrix ), ( const void * ) ( sizeof ( GLfloat ) * 8 ) );
    glVertexAttribPointer ( MVP_LOC + 3, 4, GL_FLOAT, GL_FALSE, sizeof ( ESMatrix ), ( const void * ) ( sizeof ( GLfloat ) * 12 ) );
+   // 使能对应的location（把mvp矩阵的每一行都当做一种顶点属性，以顶点数组的方式来处理了）
    glEnableVertexAttribArray ( MVP_LOC + 0 );
    glEnableVertexAttribArray ( MVP_LOC + 1 );
    glEnableVertexAttribArray ( MVP_LOC + 2 );
    glEnableVertexAttribArray ( MVP_LOC + 3 );
 
-   // One MVP per instance
+   // One MVP per instance 对每个实例，读取一次属性  （重要）
    glVertexAttribDivisor ( MVP_LOC + 0, 1 );
    glVertexAttribDivisor ( MVP_LOC + 1, 1 );
    glVertexAttribDivisor ( MVP_LOC + 2, 1 );
    glVertexAttribDivisor ( MVP_LOC + 3, 1 );
 
-   // Bind the index buffer
+   // Bind the index buffer  索引缓冲区
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->indicesIBO );
 
    // Draw the cubes
@@ -281,7 +292,7 @@ void Draw ( ESContext *esContext )
 void Shutdown ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
-
+   // 删除buffer对象
    glDeleteBuffers ( 1, &userData->positionVBO );
    glDeleteBuffers ( 1, &userData->colorVBO );
    glDeleteBuffers ( 1, &userData->mvpVBO );
@@ -304,6 +315,7 @@ int esMain ( ESContext *esContext )
    }
 
    esRegisterShutdownFunc ( esContext, Shutdown );
+   //注册updatehe和draw回调函数，退出esMain之后，框架将循环调用注册的Draw和Update，直到窗口关闭
    esRegisterUpdateFunc ( esContext, Update );
    esRegisterDrawFunc ( esContext, Draw );
 

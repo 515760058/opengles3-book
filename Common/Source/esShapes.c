@@ -167,13 +167,13 @@ int ESUTIL_API esGenSphere ( int numSlices, float radius, GLfloat **vertices, GL
 /// \param indices If not NULL, will contain the array of indices for the triangle strip
 /// \return The number of indices required for rendering the buffers (the number of indices stored in the indices array
 ///         if it is not NULL ) as a GL_TRIANGLE_STRIP
-//
+// 生成顶点位置数据vertices  法线数据indices  纹理坐标数据texCoords 和  顶点索引数据indices
 int ESUTIL_API esGenCube ( float scale, GLfloat **vertices, GLfloat **normals,
                            GLfloat **texCoords, GLuint **indices )
 {
    int i;
-   int numVertices = 24;
-   int numIndices = 36;
+   int numVertices = 24;//顶点的数量
+   int numIndices = 36;//索引的数量
 
    GLfloat cubeVerts[] =
    {
@@ -267,7 +267,7 @@ int ESUTIL_API esGenCube ( float scale, GLfloat **vertices, GLfloat **normals,
 
       for ( i = 0; i < numVertices * 3; i++ )
       {
-         ( *vertices ) [i] *= scale;
+         ( *vertices ) [i] *= scale;//缩小为原来的0.1倍
       }
    }
 
