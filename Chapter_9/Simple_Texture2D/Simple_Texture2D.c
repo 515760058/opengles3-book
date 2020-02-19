@@ -101,7 +101,7 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    char vShaderStr[] =
       "#version 300 es                            \n"
-      "layout(location = 0) in vec4 a_position;   \n"//顶点位置vec4
+      "layout(location = 0) in vec4 a_position;   \n"//顶点位置vec4  最后一维和z坐标，在场景中的深度有关系
       "layout(location = 1) in vec2 a_texCoord;   \n"//顶点纹理坐标
       "out vec2 v_texCoord;                       \n"
       "void main()                                \n"

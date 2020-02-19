@@ -246,7 +246,7 @@ int Init ( ESContext *esContext )
    char vShaderStr[] =
       "#version 300 es                            \n"
       "uniform float u_offset;                    \n"//统一变量 横向偏移
-      "layout(location = 0) in vec4 a_position;   \n"//位置是4维的？
+      "layout(location = 0) in vec4 a_position;   \n"//位置是4维的
       "layout(location = 1) in vec2 a_texCoord;   \n"//纹理坐标
       "out vec2 v_texCoord;                       \n"
       "void main()                                \n"
@@ -289,9 +289,10 @@ int Init ( ESContext *esContext )
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
-   GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f, 1.5f,  // Position 0   注意：四维的位置坐标
+   // 注意：四维的位置坐标 （ 最后一维和z坐标,场景中的深度有关系）
+   GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f, 1.5f,  // Position 0     1.75，视觉上更远离自己
                             0.0f,  0.0f,              // TexCoord 0 
-                           -0.5f, -0.5f, 0.0f, 0.75f, // Position 1
+                           -0.5f, -0.5f, 0.0f, 0.75f, // Position 1     0.75，视觉上更靠近自己
                             0.0f,  1.0f,              // TexCoord 1
                             0.5f, -0.5f, 0.0f, 0.75f, // Position 2
                             1.0f,  1.0f,              // TexCoord 2

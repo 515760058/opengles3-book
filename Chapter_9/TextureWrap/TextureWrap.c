@@ -33,7 +33,7 @@
 //
 //    This is an example that demonstrates the three texture
 //    wrap modes available on 2D textures
-//
+//  纹理的包装模式(GL_TEXTURE_WRAP_S   GL_TEXTURE_WRAP_T)：超过纹理范围的采样方法
 #include <stdlib.h>
 #include "esUtil.h"
 
@@ -55,11 +55,10 @@ typedef struct
 
 ///
 //  Generate an RGB8 checkerboard image
-//
+// 生成一张图像
 GLubyte *GenCheckImage ( int width, int height, int checkSize )
 {
-   int x,
-       y;
+   int x, y;
    GLubyte *pixels = malloc ( width * height * 3 );
 
    if ( pixels == NULL )
@@ -94,13 +93,13 @@ GLubyte *GenCheckImage ( int width, int height, int checkSize )
 
 ///
 // Create a mipmapped 2D texture image
-//
+//  生成一张图像，并上传纹理，设置过滤模式
 GLuint CreateTexture2D( )
 {
    // Texture object handle
    GLuint textureId;
-   int    width = 256,
-          height = 256;
+   int    width = 512;// 256;
+   int    height = 512;// 256;
    GLubyte *pixels;
 
    pixels = GenCheckImage ( width, height, 64 );
@@ -120,7 +119,7 @@ GLuint CreateTexture2D( )
    glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGB, width, height,
                   0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
 
-   // Set the filtering mode
+   // Set the filtering mode 过滤模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
@@ -137,15 +136,15 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    char vShaderStr[] =
       "#version 300 es                            \n"
-      "uniform float u_offset;                    \n"
+      "uniform float u_offset;                    \n"//统一变量，偏移
       "layout(location = 0) in vec4 a_position;   \n"
       "layout(location = 1) in vec2 a_texCoord;   \n"
       "out vec2 v_texCoord;                       \n"
       "void main()                                \n"
       "{                                          \n"
       "   gl_Position = a_position;               \n"
-      "   gl_Position.x += u_offset;              \n"
-      "   v_texCoord = a_texCoord;                \n"
+      "   gl_Position.x += u_offset;              \n"//x方向偏移
+      "   v_texCoord = a_texCoord;                \n"//纹理坐标
       "}                                          \n";
 
    char fShaderStr[] =
@@ -153,10 +152,10 @@ int Init ( ESContext *esContext )
       "precision mediump float;                            \n"
       "in vec2 v_texCoord;                                 \n"
       "layout(location = 0) out vec4 outColor;             \n"
-      "uniform sampler2D s_texture;                        \n"
+      "uniform sampler2D s_texture;                        \n"//统一变量 采样器
       "void main()                                         \n"
       "{                                                   \n"
-      "   outColor = texture( s_texture, v_texCoord );     \n"
+      "   outColor = texture( s_texture, v_texCoord );     \n"//根据纹理坐标，从采样器对应的纹理单元（对应到纹理）获取颜色数据
       "}                                                   \n";
 
    // Load the shaders and get a linked program object
@@ -181,16 +180,17 @@ int Init ( ESContext *esContext )
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
+   //顶点的位置属性（四维,最后一维和z坐标深度有关系，把1.0改成了0.8看实验效果），及其纹理坐标属性
    GLfloat vVertices[] = { -0.3f,  0.3f, 0.0f, 1.0f,  // Position 0
                            -1.0f,  -1.0f,              // TexCoord 0
                            -0.3f, -0.3f, 0.0f, 1.0f, // Position 1
                            -1.0f,  2.0f,              // TexCoord 1
-                           0.3f, -0.3f, 0.0f, 1.0f, // Position 2
+                           0.3f, -0.3f, 0.0f, 0.8f, // Position 2      0.8 视觉上更靠近自己
                            2.0f,  2.0f,              // TexCoord 2
                            0.3f,  0.3f, 0.0f, 1.0f,  // Position 3
                            2.0f,  -1.0f               // TexCoord 3
                          };
-   GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
+   GLushort indices[] = { 0, 1, 2, 0, 2, 3 };//顶点索引
 
    // Set the viewport
    glViewport ( 0, 0, esContext->width, esContext->height );
@@ -201,39 +201,39 @@ void Draw ( ESContext *esContext )
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position 指定顶点位置的数据格式，及其数据地址
    glVertexAttribPointer ( 0, 4, GL_FLOAT,
                            GL_FALSE, 6 * sizeof ( GLfloat ), vVertices );
-   // Load the texture coordinate
+   // Load the texture coordinate 指定顶点的纹理坐标的数据格式，及其数据地址
    glVertexAttribPointer ( 1, 2, GL_FLOAT,
                            GL_FALSE, 6 * sizeof ( GLfloat ), &vVertices[4] );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
 
    // Bind the texture
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->textureId );
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture ( GL_TEXTURE_2D, userData->textureId );//将 纹理 绑定到 纹理单元0
 
-   // Set the sampler texture unit to 0
+   // Set the sampler texture unit to 0 设置采样器使用纹理单元0
    glUniform1i ( userData->samplerLoc, 0 );
 
-   // Draw quad with repeat wrap mode
+   // Draw quad with repeat wrap mode 设置包装模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-   glUniform1f ( userData->offsetLoc, -0.7f );
+   glUniform1f ( userData->offsetLoc, -0.7f );//左移
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
-   // Draw quad with clamp to edge wrap mode
+   // Draw quad with clamp to edge wrap mode 设置包装模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-   glUniform1f ( userData->offsetLoc, 0.0f );
+   glUniform1f ( userData->offsetLoc, 0.0f );//中间
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
-   // Draw quad with mirrored repeat
+   // Draw quad with mirrored repeat 设置包装模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT );
-   glUniform1f ( userData->offsetLoc, 0.7f );
+   glUniform1f ( userData->offsetLoc, 0.7f );//右移
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 }
 
