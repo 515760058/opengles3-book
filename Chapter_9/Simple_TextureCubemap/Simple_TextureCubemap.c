@@ -48,16 +48,16 @@ typedef struct
    GLuint textureId;
 
    // Vertex data
-   int      numIndices;
-   GLfloat *vertices;
-   GLfloat *normals;
-   GLuint  *indices;
+   int      numIndices;//索引的数量
+   GLfloat *vertices;//顶点位置数据指针
+   GLfloat *normals;//顶点法线数据指针
+   GLuint  *indices;//顶点索引数据指针
 
 } UserData;
 
 ///
-// Create a simple cubemap with a 1x1 face with a different
-// color for each face
+// Create a simple cubemap with a 1x1 face with a different color for each face
+// 创建立方图纹理，并为立方图每个面上传纹理数据
 GLuint CreateSimpleTextureCubemap( )
 {
    GLuint textureId;
@@ -81,10 +81,10 @@ GLuint CreateSimpleTextureCubemap( )
    // Generate a texture object
    glGenTextures ( 1, &textureId );
 
-   // Bind the texture object
+   // Bind the texture object 绑定立方图纹理
    glBindTexture ( GL_TEXTURE_CUBE_MAP, textureId );
-
-   // Load the cube face - Positive X
+   // 申请内存，上传立方图6个面的纹理数据
+   // Load the cube face - Positive X 
    glTexImage2D ( GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, 1, 1, 0,
                   GL_RGB, GL_UNSIGNED_BYTE, &cubePixels[0] );
 
@@ -108,7 +108,7 @@ GLuint CreateSimpleTextureCubemap( )
    glTexImage2D ( GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, 1, 1, 0,
                   GL_RGB, GL_UNSIGNED_BYTE, &cubePixels[5] );
 
-   // Set the filtering mode
+   // Set the filtering mode 过滤模式
    glTexParameteri ( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
    glTexParameteri ( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
@@ -154,10 +154,10 @@ int Init ( ESContext *esContext )
    // Load the texture
    userData->textureId = CreateSimpleTextureCubemap ();
 
-   // Generate the vertex data
-   userData->numIndices = esGenSphere ( 20, 0.75f, &userData->vertices, &userData->normals,
-                                        NULL, &userData->indices );
-
+   // Generate the vertex data 球体的顶点信息
+   //userData->numIndices = esGenSphere ( 20, 0.75f, &userData->vertices, &userData->normals, NULL, &userData->indices );
+   // 自己修改的：生成立方体
+   userData->numIndices = esGenCube(1.0, &userData->vertices, &userData->normals, NULL, &userData->indices);
 
    glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
    return TRUE;
@@ -176,29 +176,29 @@ void Draw ( ESContext *esContext )
    // Clear the color buffer
    glClear ( GL_COLOR_BUFFER_BIT );
 
-
+   //面剔除
    glCullFace ( GL_BACK );
    glEnable ( GL_CULL_FACE );
 
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position  指定顶点位置的数据格式，和数据地址
    glVertexAttribPointer ( 0, 3, GL_FLOAT,
                            GL_FALSE, 0, userData->vertices );
-   // Load the normal
+   // Load the normal 指定顶点法线的数据格式，和数据地址
    glVertexAttribPointer ( 1, 3, GL_FLOAT,
                            GL_FALSE, 0, userData->normals );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
 
    // Bind the texture
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_CUBE_MAP, userData->textureId );
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture ( GL_TEXTURE_CUBE_MAP, userData->textureId );//把纹理绑定到纹理单元0
 
    // Set the sampler texture unit to 0
-   glUniform1i ( userData->samplerLoc, 0 );
+   glUniform1i ( userData->samplerLoc, 0 );//设置采样器使用纹理单元0
 
    glDrawElements ( GL_TRIANGLES, userData->numIndices,
                     GL_UNSIGNED_INT, userData->indices );

@@ -56,11 +56,10 @@ typedef struct
 
 ///
 //  From an RGB8 source image, generate the next level mipmap
-//
+// 使用盒式过滤（上一级4个像素的平均值），生成下一级mip贴图
 GLboolean GenMipMap2D ( GLubyte *src, GLubyte **dst, int srcWidth, int srcHeight, int *dstWidth, int *dstHeight )
 {
-   int x,
-       y;
+   int x, y;
    int texelSize = 3;
 
    *dstWidth = srcWidth / 2;
@@ -130,7 +129,7 @@ GLboolean GenMipMap2D ( GLubyte *src, GLubyte **dst, int srcWidth, int srcHeight
 
 ///
 //  Generate an RGB8 checkerboard image
-//
+// 生成一张图像
 GLubyte *GenCheckImage ( int width, int height, int checkSize )
 {
    int x,
@@ -169,7 +168,7 @@ GLubyte *GenCheckImage ( int width, int height, int checkSize )
 
 ///
 // Create a mipmapped 2D texture image
-//
+// 生成纹理及其对应的一系列mip图
 GLuint CreateMipMappedTexture2D( )
 {
    // Texture object handle
@@ -229,8 +228,8 @@ GLuint CreateMipMappedTexture2D( )
 
    free ( newImage );
 
-   // Set the filtering mode
-   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST );
+   // Set the filtering mode 设置过滤模式
+   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST );//从所选的最近的mip级别中取得单点样本 P170
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
    return textureId;
@@ -246,15 +245,15 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    char vShaderStr[] =
       "#version 300 es                            \n"
-      "uniform float u_offset;                    \n"
-      "layout(location = 0) in vec4 a_position;   \n"
-      "layout(location = 1) in vec2 a_texCoord;   \n"
+      "uniform float u_offset;                    \n"//统一变量 横向偏移
+      "layout(location = 0) in vec4 a_position;   \n"//位置是4维的？
+      "layout(location = 1) in vec2 a_texCoord;   \n"//纹理坐标
       "out vec2 v_texCoord;                       \n"
       "void main()                                \n"
       "{                                          \n"
-      "   gl_Position = a_position;               \n"
-      "   gl_Position.x += u_offset;              \n"
-      "   v_texCoord = a_texCoord;                \n"
+      "   gl_Position = a_position;               \n"//“gl_Position”是vec4类型的
+      "   gl_Position.x += u_offset;              \n"//平移u_offset
+      "   v_texCoord = a_texCoord;                \n"//纹理坐标
       "}                                          \n";
 
    char fShaderStr[] =
@@ -262,18 +261,18 @@ int Init ( ESContext *esContext )
       "precision mediump float;                            \n"
       "in vec2 v_texCoord;                                 \n"
       "layout(location = 0) out vec4 outColor;             \n"
-      "uniform sampler2D s_texture;                        \n"
+      "uniform sampler2D s_texture;                        \n"//统一变量 采样器
       "void main()                                         \n"
       "{                                                   \n"
-      "   outColor = texture( s_texture, v_texCoord );     \n"
+      "   outColor = texture( s_texture, v_texCoord );     \n"//在采样器对应的纹理中，通过坐标获取纹理的颜色值vec4
       "}                                                   \n";
 
    // Load the shaders and get a linked program object
    userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
 
+   //获取location
    // Get the sampler location
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
-
    // Get the offset location
    userData->offsetLoc = glGetUniformLocation ( userData->programObject, "u_offset" );
 
@@ -290,7 +289,7 @@ int Init ( ESContext *esContext )
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
-   GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f, 1.5f,  // Position 0
+   GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f, 1.5f,  // Position 0   注意：四维的位置坐标
                             0.0f,  0.0f,              // TexCoord 0 
                            -0.5f, -0.5f, 0.0f, 0.75f, // Position 1
                             0.0f,  1.0f,              // TexCoord 1
@@ -310,31 +309,31 @@ void Draw ( ESContext *esContext )
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position 指定顶点位置属性的数据地址和格式
    glVertexAttribPointer ( 0, 4, GL_FLOAT,
                            GL_FALSE, 6 * sizeof ( GLfloat ), vVertices );
-   // Load the texture coordinate
+   // Load the texture coordinate  指定顶点法线属性的数据地址和格式
    glVertexAttribPointer ( 1, 2, GL_FLOAT,
                            GL_FALSE, 6 * sizeof ( GLfloat ), &vVertices[4] );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
 
-   // Bind the texture
+   // Bind the texture 设置当前的纹理单元，激活纹理单元0
    glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->textureId );
+   glBindTexture ( GL_TEXTURE_2D, userData->textureId );//将纹理绑定到刚刚激活的纹理单元0
 
-   // Set the sampler texture unit to 0
+   // Set the sampler texture unit to 0  设置采样器使用纹理单元0
    glUniform1i ( userData->samplerLoc, 0 );
 
-   // Draw quad with nearest sampling
+   // Draw quad with nearest sampling 渲染左边的纹理
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-   glUniform1f ( userData->offsetLoc, -0.6f );
+   glUniform1f ( userData->offsetLoc, -0.6f );//左移
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 
-   // Draw quad with trilinear filtering
+   // Draw quad with trilinear filtering 渲染右边的纹理
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-   glUniform1f ( userData->offsetLoc, 0.6f );
+   glUniform1f ( userData->offsetLoc, 0.6f );//右移
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 }
 

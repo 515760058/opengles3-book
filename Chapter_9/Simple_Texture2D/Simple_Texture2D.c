@@ -68,7 +68,7 @@ GLuint CreateSimpleTexture2D( )
       255, 255,   0  // Yellow
    };
 
-   // Use tightly packed data
+   // Use tightly packed data  解包对齐
    glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );
 
    // Generate a texture object
@@ -77,12 +77,16 @@ GLuint CreateSimpleTexture2D( )
    // Bind the texture object
    glBindTexture ( GL_TEXTURE_2D, textureId );
 
-   // Load the texture
+   // Load the texture 申请GPU内存，上传纹理数据pixels
    glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
 
-   // Set the filtering mode
-   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+   // Set the filtering mode 设置过滤模式GL_NEAREST，GL_NEAREST模式不需要mip贴图
+   //glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+   //glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+
+   //自己修改的（双线性过滤模式，颜色就有像素的平均值现象   GL_LINEAR模式也不需要mip贴图）
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
    return textureId;
 
@@ -97,8 +101,8 @@ int Init ( ESContext *esContext )
    UserData *userData = esContext->userData;
    char vShaderStr[] =
       "#version 300 es                            \n"
-      "layout(location = 0) in vec4 a_position;   \n"
-      "layout(location = 1) in vec2 a_texCoord;   \n"
+      "layout(location = 0) in vec4 a_position;   \n"//顶点位置vec4
+      "layout(location = 1) in vec2 a_texCoord;   \n"//顶点纹理坐标
       "out vec2 v_texCoord;                       \n"
       "void main()                                \n"
       "{                                          \n"
@@ -111,10 +115,10 @@ int Init ( ESContext *esContext )
       "precision mediump float;                            \n"
       "in vec2 v_texCoord;                                 \n"
       "layout(location = 0) out vec4 outColor;             \n"
-      "uniform sampler2D s_texture;                        \n"
+      "uniform sampler2D s_texture;                        \n"//（指定纹理单元的）采样器
       "void main()                                         \n"
       "{                                                   \n"
-      "  outColor = texture( s_texture, v_texCoord );      \n"
+      "  outColor = texture( s_texture, v_texCoord );      \n"//根据纹理坐标，在纹理单元s_texture上进行采样
       "}                                                   \n";
 
    // Load the shaders and get a linked program object
@@ -156,23 +160,23 @@ void Draw ( ESContext *esContext )
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position 指定顶点位置的数据格式，和数据地址
    glVertexAttribPointer ( 0, 3, GL_FLOAT,
                            GL_FALSE, 5 * sizeof ( GLfloat ), vVertices );
-   // Load the texture coordinate
+   // Load the texture coordinate  指定顶点纹理坐标的数据格式，和数据地址
    glVertexAttribPointer ( 1, 2, GL_FLOAT,
                            GL_FALSE, 5 * sizeof ( GLfloat ), &vVertices[3] );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
 
    // Bind the texture
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->textureId );
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture ( GL_TEXTURE_2D, userData->textureId );//把纹理绑定到纹理单元0
 
    // Set the sampler texture unit to 0
-   glUniform1i ( userData->samplerLoc, 0 );
-
+   glUniform1i ( userData->samplerLoc, 0 );//采样器设置为使用纹理单元0
+   //渲染
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 }
 
