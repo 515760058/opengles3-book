@@ -32,7 +32,7 @@
 // Simple_TextureCubemap.c
 //
 //    This is a simple example that draws a sphere with a cubemap image applied.
-//
+//  修改：把静态的球体效果，改成动态旋转的立方体效果
 #include <stdlib.h>
 #include "esUtil.h"
 
@@ -52,7 +52,10 @@ typedef struct
    GLfloat *vertices;//顶点位置数据指针
    GLfloat *normals;//顶点法线数据指针
    GLuint  *indices;//顶点索引数据指针
-
+   //增加的
+   GLint  mvpLoc;// Uniform locations
+   GLfloat   angle;// Rotation angle
+   ESMatrix  mvpMatrix;// MVP matrix
 } UserData;
 
 ///
@@ -127,10 +130,11 @@ int Init ( ESContext *esContext )
       "#version 300 es                            \n"
       "layout(location = 0) in vec4 a_position;   \n"
       "layout(location = 1) in vec3 a_normal;     \n"
+      "uniform mat4 u_mvpMatrix;                  \n"
       "out vec3 v_normal;                         \n"
       "void main()                                \n"
       "{                                          \n"
-      "   gl_Position = a_position;               \n"
+      "   gl_Position = u_mvpMatrix * a_position; \n"
       "   v_normal = a_normal;                    \n"
       "}                                          \n";
 
@@ -151,6 +155,8 @@ int Init ( ESContext *esContext )
    // Get the sampler locations
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
 
+   userData->mvpLoc = glGetUniformLocation(userData->programObject, "u_mvpMatrix");
+   userData->angle = 45.0f;   // Starting rotation angle for the cube
    // Load the texture
    userData->textureId = CreateSimpleTextureCubemap ();
 
@@ -164,6 +170,43 @@ int Init ( ESContext *esContext )
 }
 
 ///
+// Update MVP matrix based on time
+// 根据时间，计算旋转->model_view矩阵-->MVP矩阵
+void Update(ESContext* esContext, float deltaTime)
+{
+    UserData* userData = esContext->userData;
+    ESMatrix perspective;
+    ESMatrix modelview;
+    float    aspect;
+
+    // Compute a rotation angle based on time to rotate the cube 根据时间计算旋转角度
+    userData->angle += (deltaTime * 40.0f);
+    if (userData->angle >= 360.0f)
+    {
+        userData->angle -= 360.0f;
+    }
+    // 处理project矩阵
+    // Compute the window aspect ratio
+    aspect = (GLfloat)esContext->width / (GLfloat)esContext->height;
+    // Generate a perspective matrix with a 60 degree FOV
+    esMatrixLoadIdentity(&perspective);
+    esPerspective(&perspective, 60.0f, aspect, 1.0f, 20.0f);
+
+    // 处理medel view矩阵
+    // Generate a model view matrix to rotate/translate the cube
+    esMatrixLoadIdentity(&modelview);//单位矩阵
+    // Translate away from the viewer  平移
+    esTranslate(&modelview, 0.0, 0.0, -2.0);
+    // Rotate the cube 旋转
+    esRotate(&modelview, userData->angle, 1.0, 0.0, 1.0);
+
+    // Compute the final MVP by multiplying the modevleiw and perspective matrices together
+    // 计算mvp = model_view * perspective
+    esMatrixMultiply(&userData->mvpMatrix, &modelview, &perspective);
+}
+
+
+///
 // Draw a triangle using the shader pair created in Init()
 //
 void Draw ( ESContext *esContext )
@@ -175,6 +218,7 @@ void Draw ( ESContext *esContext )
 
    // Clear the color buffer
    glClear ( GL_COLOR_BUFFER_BIT );
+   //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    //面剔除
    glCullFace ( GL_BACK );
@@ -192,6 +236,9 @@ void Draw ( ESContext *esContext )
    //使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
+
+   // Load the MVP matrix  给顶点着色器中的统一变量mvp矩阵赋值
+   glUniformMatrix4fv(userData->mvpLoc, 1, GL_FALSE, (GLfloat*)&userData->mvpMatrix.m[0][0]);
 
    // Bind the texture
    glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
@@ -232,7 +279,7 @@ int esMain ( ESContext *esContext )
    {
       return GL_FALSE;
    }
-
+   esRegisterUpdateFunc(esContext, Update);
    esRegisterDrawFunc ( esContext, Draw );
    esRegisterShutdownFunc ( esContext, ShutDown );
 
