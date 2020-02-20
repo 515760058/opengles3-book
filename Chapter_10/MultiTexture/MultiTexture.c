@@ -33,7 +33,7 @@
 //
 //    This is an example that draws a quad with a basemap and
 //    lightmap to demonstrate multitexturing.
-//
+//  10.3.1节 多重纹理
 #include <stdlib.h>
 #include "esUtil.h"
 
@@ -54,11 +54,10 @@ typedef struct
 
 ///
 // Load texture from disk
-//
+// 加载一个tga格式的文件作为纹理
 GLuint LoadTexture ( void *ioContext, char *fileName )
 {
-   int width,
-       height;
+   int width, height;
 
    char *buffer = esLoadTGA ( ioContext, fileName, &width, &height );
    GLuint texId;
@@ -71,8 +70,9 @@ GLuint LoadTexture ( void *ioContext, char *fileName )
 
    glGenTextures ( 1, &texId );
    glBindTexture ( GL_TEXTURE_2D, texId );
-
+   //上传纹理数据
    glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, buffer );
+   //设置纹理的过滤模式和包装模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
@@ -116,17 +116,18 @@ int Init ( ESContext *esContext )
       "                                                    \n"
       "  baseColor = texture( s_baseMap, v_texCoord );     \n"
       "  lightColor = texture( s_lightMap, v_texCoord );   \n"
-      "  outColor = baseColor * (lightColor + 0.25);       \n"
+      //"  outColor = baseColor;//lightColor;       \n"//查看单张纹理图像
+      "  outColor = baseColor * (lightColor + 0.25);       \n"//两个纹理的颜色混合，作为输出的片段颜色
       "}                                                   \n";
 
    // Load the shaders and get a linked program object
    userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
 
-   // Get the sampler location
+   // Get the sampler location 采样器的location
    userData->baseMapLoc = glGetUniformLocation ( userData->programObject, "s_baseMap" );
    userData->lightMapLoc = glGetUniformLocation ( userData->programObject, "s_lightMap" );
 
-   // Load the textures
+   // Load the textures 加载两个纹理图像
    userData->baseMapTexId = LoadTexture ( esContext->platformData, "basemap.tga" );
    userData->lightMapTexId = LoadTexture ( esContext->platformData, "lightmap.tga" );
 
@@ -165,30 +166,28 @@ void Draw ( ESContext *esContext )
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position 指定顶点位置的数据格式，和数据地址
    glVertexAttribPointer ( 0, 3, GL_FLOAT,
                            GL_FALSE, 5 * sizeof ( GLfloat ), vVertices );
-   // Load the texture coordinate
+   // Load the texture coordinate 指定顶点索引的数据格式，和数据地址
    glVertexAttribPointer ( 1, 2, GL_FLOAT,
                            GL_FALSE, 5 * sizeof ( GLfloat ), &vVertices[3] );
-
+   // 使能顶点数组
    glEnableVertexAttribArray ( 0 );
    glEnableVertexAttribArray ( 1 );
 
    // Bind the base map
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->baseMapTexId );
-
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture(GL_TEXTURE_2D, userData->baseMapTexId);//把base纹理绑定到纹理单元0
    // Set the base map sampler to texture unit to 0
-   glUniform1i ( userData->baseMapLoc, 0 );
+   glUniform1i ( userData->baseMapLoc, 0 );//设置base采样器使用纹理单元0
 
    // Bind the light map
-   glActiveTexture ( GL_TEXTURE1 );
-   glBindTexture ( GL_TEXTURE_2D, userData->lightMapTexId );
-
+   glActiveTexture ( GL_TEXTURE1 );//激活纹理单元1
+   glBindTexture ( GL_TEXTURE_2D, userData->lightMapTexId );//把light纹理绑定到纹理单元1
    // Set the light map sampler to texture unit 1
-   glUniform1i ( userData->lightMapLoc, 1 );
-
+   glUniform1i ( userData->lightMapLoc, 1 );//设置light采样器使用纹理单元1
+   //渲染
    glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
 }
 
