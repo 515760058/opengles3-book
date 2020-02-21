@@ -36,7 +36,7 @@
 //    per fragment using MRTs.
 //    Then, we will copy the four color buffers into four screen quadrants
 //    using framebuffer blits.
-//  11.7节  多重渲染目标
+//  11.7节 多重渲染目标 + 12.6 帧缓冲区位块传送 
 #include <stdlib.h>
 #include "esUtil.h"
 
@@ -190,7 +190,7 @@ void DrawGeometry ( ESContext *esContext )
 
 ///
 // Copy MRT output buffers to screen
-//
+// 12.6节 帧缓冲区位块传送
 void BlitTextures ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
