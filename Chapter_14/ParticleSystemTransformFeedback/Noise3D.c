@@ -183,6 +183,7 @@ float noise3D ( float *f )
    return lerp ( wz, vz0, vz1 );;
 }
 
+//¥¥Ω®3D‘Î“ÙŒ∆¿Ì
 unsigned int Create3DNoiseTexture ( int textureSize, float frequency )
 {
    GLuint textureId;
