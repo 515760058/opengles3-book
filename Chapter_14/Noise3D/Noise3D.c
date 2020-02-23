@@ -286,15 +286,17 @@ void Create3DNoiseTexture ( ESContext *esContext )
 
    glGenTextures ( 1, &userData->textureId );
    glBindTexture ( GL_TEXTURE_3D, userData->textureId );
+   //申请GPU内存，上传纹理数据
    glTexImage3D ( GL_TEXTURE_3D, 0, GL_R8, textureSize, textureSize, textureSize, 0,
                   GL_RED, GL_UNSIGNED_BYTE, texBufUbyte );
-
+   //过滤模式
    glTexParameteri ( GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
    glTexParameteri ( GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+   //包装模式 repeat
    glTexParameteri ( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
    glTexParameteri ( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT );
    glTexParameteri ( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT );
-
+   //恢复默认绑定点
    glBindTexture ( GL_TEXTURE_3D, 0 );
 
    free ( texBuf );
