@@ -33,7 +33,7 @@
 //
 //    This is an example that demonstrates generating and using
 //    a 3D noise texture.
-//
+// 使用3D噪音纹理，生成雾
 #define _USE_MATH_DEFINES
 #include <stdlib.h>
 #include <math.h>
@@ -53,7 +53,7 @@ typedef struct
    GLint  noiseTexLoc;
    GLint  timeLoc;
 
-   // Vertex daata
+   // Vertex data
    GLfloat  *vertices;
    GLfloat  *texCoords;
    GLuint   *indices;
@@ -113,6 +113,7 @@ static unsigned char permTable[256] =
    0x89, 0xD6, 0x91, 0x5D, 0x5C, 0x64, 0xF5, 0x00, 0xD8, 0xBA, 0x3C, 0x53, 0x69, 0x61, 0xCC, 0x34,
 };
 
+//初始化噪音
 void initNoiseTable()
 {
    int            i;
@@ -222,6 +223,7 @@ float noise3D ( float *f )
    return lerp ( wz, vz0, vz1 );;
 }
 
+//创建3D噪音纹理
 void Create3DNoiseTexture ( ESContext *esContext )
 {
    UserData *userData = ( UserData * ) esContext->userData;
@@ -318,48 +320,48 @@ int Init ( ESContext *esContext )
       "void main()                                 \n"
       "{                                           \n"
       "   // Transform vertex to view-space        \n"
-      "   v_eyePos = u_mvMatrix * a_position;      \n"
+      "   v_eyePos = u_mvMatrix * a_position;      \n"//眼睛的位置（世界坐标）
       "   v_color = a_color;                       \n"
       "   v_texCoord = a_texCoord;                 \n"
-      "   gl_Position = u_mvpMatrix * a_position;  \n"
+      "   gl_Position = u_mvpMatrix * a_position;  \n"//顶点的位置
       "}                                           \n";
 
    const char fShaderStr[] =
       "#version 300 es                                   \n"
       "precision mediump float;                          \n"
-      "uniform mediump sampler3D s_noiseTex;             \n"
-      "uniform float u_fogMaxDist;                       \n"
-      "uniform float u_fogMinDist;                       \n"
-      "uniform vec4  u_fogColor;                         \n"
-      "uniform float u_time;                             \n"
+      "uniform mediump sampler3D s_noiseTex;             \n"//3D噪音纹理 采样器
+      "uniform float u_fogMaxDist;                       \n"//雾的最大距离
+      "uniform float u_fogMinDist;                       \n"//雾的最小距离
+      "uniform vec4  u_fogColor;                         \n"//雾的颜色
+      "uniform float u_time;                             \n"//当前时间
       "in vec4 v_color;                                  \n"
       "in vec2 v_texCoord;                               \n"
       "in vec4 v_eyePos;                                 \n"
       "layout(location = 0) out vec4 outColor;           \n"
       "                                                  \n"
-      "float computeLinearFogFactor()                    \n"
+      "float computeLinearFogFactor()                    \n"//计算线性雾化因子
       "{                                                 \n"
       "  float factor;                                   \n"
       "  // Compute linear fog equation                  \n"
-      "  float dist = distance( v_eyePos,                \n"
+      "  float dist = distance( v_eyePos,                \n"//距离
       "                 vec4( 0.0, 0.0, 0.0, 1.0 ) );    \n"
-      "  factor = (u_fogMaxDist - dist) /                \n"
+      "  factor = (u_fogMaxDist - dist) /                \n"//雾化因子
       "           (u_fogMaxDist - u_fogMinDist );        \n"
       "  // Clamp in the [0,1] range                     \n"
-      "  factor = clamp( factor, 0.0, 1.0 );             \n"
+      "  factor = clamp( factor, 0.0, 1.0 );             \n"//约束范围[0,1]
       "  return factor;                                  \n"
       "}                                                 \n"
       "                                                  \n"
       "void main( void )                                 \n"
       "{                                                 \n"
-      "  float fogFactor = computeLinearFogFactor();     \n"
-      "  vec3 noiseCoord =                               \n"
+      "  float fogFactor = computeLinearFogFactor();     \n"//雾化因子
+      "  vec3 noiseCoord =                               \n"//3D纹理坐标
       "     vec3( v_texCoord.xy - u_time, u_time );      \n"
-      "  fogFactor -=                                    \n"
+      "  fogFactor -=                                    \n"//衰减雾化因子
       "     texture(s_noiseTex, noiseCoord).r * 0.25;    \n"
       "  fogFactor = clamp(fogFactor, 0.0, 1.0);         \n"
       "  vec4 baseColor = v_color;                       \n"
-      "  outColor = baseColor * fogFactor +              \n"
+      "  outColor = baseColor * fogFactor +              \n"//颜色的插值（混合）
       "            u_fogColor * (1.0 - fogFactor);       \n"
       "}                                                 \n";
 
@@ -369,7 +371,7 @@ int Init ( ESContext *esContext )
    // Load the shaders and get a linked program object
    userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
 
-   // Get the uniform locations
+   // Get the uniform locations 获取统一变量的location
    userData->mvpLoc = glGetUniformLocation ( userData->programObject, "u_mvpMatrix" );
    userData->mvLoc = glGetUniformLocation ( userData->programObject, "u_mvMatrix" );
    userData->noiseTexLoc = glGetUniformLocation ( userData->programObject, "s_noiseTex" );
@@ -378,7 +380,7 @@ int Init ( ESContext *esContext )
    userData->fogColorLoc = glGetUniformLocation ( userData->programObject, "u_fogColor" );
    userData->timeLoc = glGetUniformLocation ( userData->programObject, "u_time" );
 
-   // Generate the vertex data
+   // Generate the vertex data 生成立方体的顶点位置、纹理坐标和索引等数据
    userData->numIndices = esGenCube ( 3.0, &userData->vertices,
                                       NULL, &userData->texCoords, &userData->indices );
 
@@ -386,15 +388,15 @@ int Init ( ESContext *esContext )
    userData->angle = 0.0f;
    userData->curTime = 0.0f;
 
-   glEnable ( GL_DEPTH_TEST );
-   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
+   glEnable ( GL_DEPTH_TEST );//深度测试
+   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );//白色背景
 
    return TRUE;
 }
 
 ///
 // Update MVP matrix based on time
-//
+// 更新时间、MV矩阵和MVP矩阵
 void Update ( ESContext *esContext, float deltaTime )
 {
    UserData *userData = ( UserData * ) esContext->userData;
@@ -406,21 +408,22 @@ void Update ( ESContext *esContext, float deltaTime )
    // Compute the window aspect ratio
    aspect = ( GLfloat ) esContext->width / ( GLfloat ) esContext->height;
 
-   // Generate a perspective matrix with a 60 degree FOV
+   // Generate a perspective matrix with a 60 degree FOV  投影矩阵
    esMatrixLoadIdentity ( &perspective );
    esPerspective ( &perspective, 60.0f, aspect, 1.0f, 20.0f );
 
-   // Generate a model view matrix to rotate/translate the cube
+   // Generate a model view matrix to rotate/translate the cube 单位矩阵
    esMatrixLoadIdentity ( &userData->mvMatrix );
 
-   // Translate away from the viewer
-   esTranslate ( &userData->mvMatrix, 0.0, -2.5, -2.5 );
+   // Translate away from the viewer 平移
+   esTranslate ( &userData->mvMatrix, 0.0, -2.5, -2.5 );//把0改成userData->curTime，可以清楚看到立方体
 
-   // Rotate the cube
+   // Rotate the cube 旋转
+   //userData->angle = userData->curTime;//自己加的，观察效果
    esRotate ( &userData->mvMatrix, userData->angle, 1.0, 0.0, 1.0 );
 
    // Compute the final MVP by multiplying the
-   // modevleiw and perspective matrices together
+   // modevleiw and perspective matrices together  MVP = MV * P
    esMatrixMultiply ( &userData->mvpMatrix, &userData->mvMatrix, &perspective );
 }
 
@@ -440,28 +443,28 @@ void Draw ( ESContext *esContext )
    // Use the program object
    glUseProgram ( userData->programObject );
 
-   // Load the vertex position
+   // Load the vertex position 指定顶点位置的数据格式和数据地址
    glVertexAttribPointer ( ATTRIB_LOCATION_POS, 3, GL_FLOAT,
                            GL_FALSE, 3 * sizeof ( GLfloat ), userData->vertices );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( ATTRIB_LOCATION_POS );
 
-   // Set the vertex color to red
+   // Set the vertex color to red 设置顶点图元的颜色 红色  常量
    glVertexAttrib4f ( ATTRIB_LOCATION_COLOR, 1.0f, 0.0f, 0.0f, 1.0f );
 
-   // Bind the texture coordinates
+   // Bind the texture coordinates 指定顶点纹理坐标的数据格式和数据地址
    glVertexAttribPointer ( ATTRIB_LOCATION_TEXCOORD, 2, GL_FLOAT,
                            GL_FALSE, 2 * sizeof ( GLfloat ), userData->texCoords );
-
+   //使能顶点数组
    glEnableVertexAttribArray ( ATTRIB_LOCATION_TEXCOORD );
 
-   // Load the matrices
+   // Load the matrices 设置统一变量的值
    glUniformMatrix4fv ( userData->mvpLoc, 1, GL_FALSE, ( GLfloat * ) &userData->mvpMatrix.m[0][0] );
    glUniformMatrix4fv ( userData->mvLoc, 1, GL_FALSE, ( GLfloat * ) &userData->mvMatrix.m[0][0] );
 
-   // Load other uniforms
+   // Load other uniforms 设置其他的统一变量
    {
-      float fogColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+      float fogColor[4] = { 0.0f, 0.0f, 1.0f, 1.0f };//雾的颜色 蓝色
       float fogMinDist = 2.75f;
       float fogMaxDist = 4.0f;
       glUniform1f ( userData->fogMinDistLoc, fogMinDist );
@@ -471,11 +474,11 @@ void Draw ( ESContext *esContext )
       glUniform1f ( userData->timeLoc, userData->curTime * 0.1f );
    }
 
-   // Bind the 3D texture
-   glUniform1i ( userData->noiseTexLoc, 0 );
-   glBindTexture ( GL_TEXTURE_3D, userData->textureId );
+   // Bind the 3D texture 绑定3D纹理
+   glUniform1i ( userData->noiseTexLoc, 0 );//设置采样器使用纹理单元0 （纹理单元GL_TEXTURE0默认总是被激活。）
+   glBindTexture ( GL_TEXTURE_3D, userData->textureId );//把纹理绑定到纹理单元0
 
-   // Draw the cube
+   // Draw the cube 渲染
    glDrawElements ( GL_TRIANGLES, userData->numIndices, GL_UNSIGNED_INT, userData->indices );
 }
 
@@ -520,9 +523,10 @@ int esMain ( ESContext *esContext )
    {
       return GL_FALSE;
    }
-
+   //注册回调函数，退出esMain之后，框架将循环调用注册的Draw和Update，直到窗口关闭
    esRegisterShutdownFunc ( esContext, Shutdown );
    esRegisterUpdateFunc ( esContext, Update );
+
    esRegisterDrawFunc ( esContext, Draw );
 
    return GL_TRUE;

@@ -86,7 +86,7 @@ typedef struct
 
 ///
 // Initialize the MVP matrix
-//
+// 初始化MVP矩阵
 int InitMVP ( ESContext *esContext )
 {
    ESMatrix perspective;
@@ -100,7 +100,7 @@ int InitMVP ( ESContext *esContext )
    // Compute the window aspect ratio
    aspect = (GLfloat) esContext->width / (GLfloat) esContext->height;
    
-   // Generate a perspective matrix with a 45 degree FOV for the scene rendering
+   // Generate a perspective matrix with a 45 degree FOV for the scene rendering 投影矩阵
    esMatrixLoadIdentity ( &perspective );
    esPerspective ( &perspective, 45.0f, aspect, 0.1f, 100.0f );
 
@@ -110,23 +110,22 @@ int InitMVP ( ESContext *esContext )
 
    // GROUND
    // Generate a model view matrix to rotate/translate the ground
-   esMatrixLoadIdentity ( &model );
-
+   esMatrixLoadIdentity ( &model );//单位矩阵
    // Center the ground
-   esTranslate ( &model, -2.0f, -2.0f, 0.0f );
-   esScale ( &model, 10.0f, 10.0f, 10.0f );
-   esRotate ( &model, 90.0f, 1.0f, 0.0f, 0.0f );
+   esTranslate ( &model, -2.0f, -2.0f, 0.0f );//平移
+   esScale ( &model, 10.0f, 10.0f, 10.0f );//缩放
+   esRotate ( &model, 90.0f, 1.0f, 0.0f, 0.0f );//旋转
 
    // create view matrix transformation from the eye position
    esMatrixLookAt ( &view, 
                     userData->eyePosition[0], userData->eyePosition[1], userData->eyePosition[2],
                     0.0f, 0.0f, 0.0f,
                     0.0f, 1.0f, 0.0f );
-
+   // MV = M * V
    esMatrixMultiply ( &modelview, &model, &view );
 
    // Compute the final ground MVP for the scene rendering by multiplying the 
-   // modelview and perspective matrices together
+   // modelview and perspective matrices together  MVP = MV * P
    esMatrixMultiply ( &userData->groundMvpMatrix, &modelview, &perspective );
 
    // create view matrix transformation from the light position
@@ -186,19 +185,19 @@ int InitShadowMap ( ESContext *esContext )
 
    glGenTextures ( 1, &userData->shadowMapTextureId );
    glBindTexture ( GL_TEXTURE_2D, userData->shadowMapTextureId );
+   //申请GPU内存
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, userData->shadowMapTextureWidth, userData->shadowMapTextureHeight, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+   //过滤模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+   //包装模式
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE );
    glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE );
         
    // Setup hardware comparison
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE );
    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL );
-        
-   glTexImage2D ( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
-                  userData->shadowMapTextureWidth, userData->shadowMapTextureHeight, 
-                  0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL );
-
+   //绑定到默认纹理点
    glBindTexture ( GL_TEXTURE_2D, 0 );
 
    glGetIntegerv ( GL_FRAMEBUFFER_BINDING, &defaultFramebuffer );
@@ -208,11 +207,11 @@ int InitShadowMap ( ESContext *esContext )
    glBindFramebuffer ( GL_FRAMEBUFFER, userData->shadowMapBufferId );
 
    glDrawBuffers ( 1, &none );
-   
+   //纹理作为fbo的color attachment
    glFramebufferTexture2D ( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, userData->shadowMapTextureId, 0 );
 
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->shadowMapTextureId );
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture ( GL_TEXTURE_2D, userData->shadowMapTextureId );//把纹理绑定到纹理单元0
  
    if ( GL_FRAMEBUFFER_COMPLETE != glCheckFramebufferStatus ( GL_FRAMEBUFFER ) )
    {
