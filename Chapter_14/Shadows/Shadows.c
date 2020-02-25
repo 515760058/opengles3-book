@@ -32,7 +32,7 @@
 // Shadows.c
 //
 //    Demonstrates shadow rendering with depth texture and 6x6 PCF
-//
+// 使用深度纹理和6*6PCF来渲染阴影
 #include <stdlib.h>
 #include <math.h>
 #include "esUtil.h"
@@ -80,8 +80,8 @@ typedef struct
    ESMatrix  cubeMvpMatrix;
    ESMatrix  cubeMvpLightMatrix;
 
-   float eyePosition[3];
-   float lightPosition[3];
+   float eyePosition[3];//视角位置
+   float lightPosition[3];//光源的位置
 } UserData;
 
 ///
@@ -104,7 +104,7 @@ int InitMVP ( ESContext *esContext )
    esMatrixLoadIdentity ( &perspective );
    esPerspective ( &perspective, 45.0f, aspect, 0.1f, 100.0f );
 
-   // Generate an orthographic projection matrix for the shadow map rendering
+   // Generate an orthographic projection matrix for the shadow map rendering 正交投影矩阵
    esMatrixLoadIdentity ( &ortho );
    esOrtho ( &ortho, -10, 10, -10, 10, -30, 30 );
 
@@ -174,6 +174,7 @@ int InitMVP ( ESContext *esContext )
    return TRUE;
 }
 
+//初始化深度纹理，并设为fbo的attachment
 int InitShadowMap ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
@@ -205,7 +206,7 @@ int InitShadowMap ( ESContext *esContext )
    // setup fbo
    glGenFramebuffers ( 1, &userData->shadowMapBufferId );
    glBindFramebuffer ( GL_FRAMEBUFFER, userData->shadowMapBufferId );
-
+   //片段颜色要写入的缓冲区，（没有使用颜色渲染）
    glDrawBuffers ( 1, &none );
    //纹理作为fbo的color attachment
    glFramebufferTexture2D ( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, userData->shadowMapTextureId, 0 );
@@ -217,7 +218,7 @@ int InitShadowMap ( ESContext *esContext )
    {
       return FALSE;
    }
-
+   //还原状态，设置为默认的fbo
    glBindFramebuffer ( GL_FRAMEBUFFER, defaultFramebuffer );
 
    return TRUE;
@@ -232,6 +233,7 @@ int Init ( ESContext *esContext )
    GLuint *indices;
 
    UserData *userData = esContext->userData;
+   //第一遍渲染：从光源的角度渲染场景，将片段的深度值记录在一个深度纹理中
    const char vShadowMapShaderStr[] =  
       "#version 300 es                                  \n"
       "uniform mat4 u_mvpLightMatrix;                   \n"
@@ -246,13 +248,13 @@ int Init ( ESContext *esContext )
       "#version 300 es                                  \n"
       "precision lowp float;                            \n"
       "void main()                                      \n"
-      "{                                                \n"
+      "{                                                \n"//没有输出片段颜色，只要在深度纹理中记录片段的深度值
       "}                                                \n";
-
+   //第二遍渲染：从眼睛位置的角度渲染场景，到fbo0中
     const char vSceneShaderStr[] =  
       "#version 300 es                                   \n"
-      "uniform mat4 u_mvpMatrix;                         \n"
-      "uniform mat4 u_mvpLightMatrix;                    \n"
+      "uniform mat4 u_mvpMatrix;                         \n"//眼睛位置MVP
+      "uniform mat4 u_mvpLightMatrix;                    \n"//光源位置MVP
       "layout(location = 0) in vec4 a_position;          \n"
       "layout(location = 1) in vec4 a_color;             \n"
       "out vec4 v_color;                                 \n"
@@ -261,10 +263,10 @@ int Init ( ESContext *esContext )
       "{                                                 \n"
       "   v_color = a_color;                             \n"
       "   gl_Position = u_mvpMatrix * a_position;        \n"
-      "   v_shadowCoord = u_mvpLightMatrix * a_position; \n"
+      "   v_shadowCoord = u_mvpLightMatrix * a_position; \n"//经过光源MVP的转换，获取片段在深度纹理中的坐标
       "                                                  \n"
       "   // transform from [-1,1] to [0,1];             \n"
-      "   v_shadowCoord = v_shadowCoord * 0.5 + 0.5;     \n"
+      "   v_shadowCoord = v_shadowCoord * 0.5 + 0.5;     \n"//转化为纹理坐标
       "}                                                 \n";
    
    const char fSceneShaderStr[] =  
@@ -275,13 +277,13 @@ int Init ( ESContext *esContext )
       "in vec4 v_shadowCoord;                                         \n"
       "layout(location = 0) out vec4 outColor;                        \n"
       "                                                               \n"
-      "float lookup ( float x, float y )                              \n"
+      "float lookup ( float x, float y )                              \n"//根据纹理坐标，判断该片段是否在阴影中
       "{                                                              \n"
       "   float pixelSize = 0.002; // 1/500                           \n"
       "   vec4 offset = vec4 ( x * pixelSize * v_shadowCoord.w,       \n"
       "                        y * pixelSize * v_shadowCoord.w,       \n"
       "                        -0.005 * v_shadowCoord.w, 0.0 );       \n"
-      "   return textureProj ( s_shadowMap, v_shadowCoord + offset ); \n"
+      "   return textureProj ( s_shadowMap, v_shadowCoord + offset ); \n"//片段在阴影中，采样结果为0。不在阴影中，采样结果为1.
       "}                                                              \n"
       "                                                               \n"
       "void main()                                                    \n"
@@ -291,33 +293,34 @@ int Init ( ESContext *esContext )
       "   float x, y;                                                 \n"
       "   for ( x = -2.0; x <= 2.0; x += 2.0 )                        \n"
       "      for ( y = -2.0; y <= 2.0; y += 2.0 )                     \n"
-      "         sum += lookup ( x, y );                               \n"
+      "         sum += lookup ( x, y );                               \n"//9个点的采样
       "                                                               \n"
       "   // divide sum by 9.0                                        \n"
-      "   sum = sum * 0.11;                                           \n"
-      "   outColor = v_color * sum;                                   \n"
+      "   sum = sum * 0.11;                                           \n"//9个点的平均
+      "   outColor = v_color * sum;                                   \n"//获得最终的颜色
       "}                                                              \n";
 
    // Load the shaders and get a linked program object
-   userData->shadowMapProgramObject = esLoadProgram ( vShadowMapShaderStr, fShadowMapShaderStr );
-   userData->sceneProgramObject = esLoadProgram ( vSceneShaderStr, fSceneShaderStr );
+   userData->shadowMapProgramObject = esLoadProgram ( vShadowMapShaderStr, fShadowMapShaderStr );//渲染fbo深度纹理的程序
+   userData->sceneProgramObject = esLoadProgram ( vSceneShaderStr, fSceneShaderStr );//渲染最终场景的程序
 
-   // Get the uniform locations
+   // Get the uniform locations 获得统一变量的location
    userData->sceneMvpLoc = glGetUniformLocation ( userData->sceneProgramObject, "u_mvpMatrix" );
-   userData->shadowMapMvpLoc = glGetUniformLocation ( userData->shadowMapProgramObject, "u_mvpMatrix" );
+   userData->shadowMapMvpLoc = glGetUniformLocation ( userData->shadowMapProgramObject, "u_mvpMatrix" );//着色器中没有这个mvp矩阵啊？
    userData->sceneMvpLightLoc = glGetUniformLocation ( userData->sceneProgramObject, "u_mvpLightMatrix" );
    userData->shadowMapMvpLightLoc = glGetUniformLocation ( userData->shadowMapProgramObject, "u_mvpLightMatrix" );
 
-   // Get the sampler location
+   // Get the sampler location 获得采样器的location
    userData->shadowMapSamplerLoc = glGetUniformLocation ( userData->sceneProgramObject, "s_shadowMap" );
 
    // Generate the vertex and index data for the ground
    userData->groundGridSize = 3;
-   userData->groundNumIndices = esGenSquareGrid( userData->groundGridSize, &positions, &indices );
+   userData->groundNumIndices = esGenSquareGrid( userData->groundGridSize, &positions, &indices );//地面的顶点位置和索引
 
    // Index buffer object for the ground model
    glGenBuffers ( 1, &userData->groundIndicesIBO );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->groundIndicesIBO );
+   //申请GPU内存  上传地面顶点的索引数据
    glBufferData ( GL_ELEMENT_ARRAY_BUFFER, userData->groundNumIndices * sizeof( GLuint ), indices, GL_STATIC_DRAW );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, 0 );
    free( indices );
@@ -325,17 +328,17 @@ int Init ( ESContext *esContext )
    // Position VBO for ground model
    glGenBuffers ( 1, &userData->groundPositionVBO );
    glBindBuffer ( GL_ARRAY_BUFFER, userData->groundPositionVBO );
-   glBufferData ( GL_ARRAY_BUFFER, userData->groundGridSize * userData->groundGridSize * sizeof( GLfloat ) * 3, 
-                  positions, GL_STATIC_DRAW );
+   //申请GPU内存  上传地面顶点的位置数据
+   glBufferData ( GL_ARRAY_BUFFER, userData->groundGridSize * userData->groundGridSize * sizeof( GLfloat ) * 3,  positions, GL_STATIC_DRAW );
    free( positions );
 
-   // Generate the vertex and index date for the cube model
-   userData->cubeNumIndices = esGenCube ( 1.0f, &positions,
-                                          NULL, NULL, &indices );
+   // Generate the vertex and index date for the cube model  生成立方体模型的顶点位置和索引数据
+   userData->cubeNumIndices = esGenCube ( 1.0f, &positions, NULL, NULL, &indices );
 
    // Index buffer object for cube model
    glGenBuffers ( 1, &userData->cubeIndicesIBO );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, userData->cubeIndicesIBO );
+   //申请GPU内存 上传立方体模型的顶点索引数据
    glBufferData ( GL_ELEMENT_ARRAY_BUFFER, sizeof( GLuint ) * userData->cubeNumIndices, indices, GL_STATIC_DRAW );
    glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, 0 );
    free( indices );
@@ -343,29 +346,30 @@ int Init ( ESContext *esContext )
    // Position VBO for cube model
    glGenBuffers ( 1, &userData->cubePositionVBO );
    glBindBuffer ( GL_ARRAY_BUFFER, userData->cubePositionVBO );
+   //申请GPU内存 上传立方体模型的顶点位置数据
    glBufferData ( GL_ARRAY_BUFFER, 24 * sizeof( GLfloat ) * 3, positions, GL_STATIC_DRAW );
    free( positions );
 
    // setup transformation matrices
-   userData->eyePosition[0] = -5.0f;
+   userData->eyePosition[0] = -5.0f;//眼睛位置
    userData->eyePosition[1] = 3.0f;
    userData->eyePosition[2] = 5.0f;
-   userData->lightPosition[0] = 10.0f;
+   userData->lightPosition[0] = 10.0f;//光源位置
    userData->lightPosition[1] = 5.0f;
    userData->lightPosition[2] = 2.0f;
    
-   // create depth texture
+   // create depth texture  初始化深度纹理，并设为fbo的attachment
    if ( !InitShadowMap( esContext ) )
    {
       return FALSE;
    }
 
-   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
+   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );//白色背景
 
-   // disable culling
+   // disable culling 面剔除
    glDisable ( GL_CULL_FACE );
 
-   // enable depth test
+   // enable depth test 使能深度测试
    glEnable ( GL_DEPTH_TEST );
 
    return TRUE;
@@ -380,42 +384,42 @@ void DrawScene ( ESContext *esContext,
 {
    UserData *userData = esContext->userData;
  
-   // Draw the ground
+   // Draw the ground 渲染地面
    // Load the vertex position
    glBindBuffer ( GL_ARRAY_BUFFER, userData->groundPositionVBO );
-   glVertexAttribPointer ( POSITION_LOC, 3, GL_FLOAT, 
-                           GL_FALSE, 3 * sizeof(GLfloat), (const void*)NULL );
-   glEnableVertexAttribArray ( POSITION_LOC );   
+   //指定缓冲区中地面顶点位置数据的格式，和数据偏移
+   glVertexAttribPointer ( POSITION_LOC, 3, GL_FLOAT,  GL_FALSE, 3 * sizeof(GLfloat), (const void*)NULL );
+   glEnableVertexAttribArray ( POSITION_LOC );   //使能顶点数组
 
-   // Bind the index buffer
+   // Bind the index buffer  地面顶点索引数据
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, userData->groundIndicesIBO );
 
-   // Load the MVP matrix for the ground model
+   // Load the MVP matrix for the ground model 加载地面的MVP矩阵
    glUniformMatrix4fv ( mvpLoc, 1, GL_FALSE, (GLfloat*) &userData->groundMvpMatrix.m[0][0] );
    glUniformMatrix4fv ( mvpLightLoc, 1, GL_FALSE, (GLfloat*) &userData->groundMvpLightMatrix.m[0][0] );
 
-   // Set the ground color to light gray
+   // Set the ground color to light gray 设置地面的颜色常量属性（灰色）
    glVertexAttrib4f ( COLOR_LOC, 0.9f, 0.9f, 0.9f, 1.0f );
-
+   //渲染地面
    glDrawElements ( GL_TRIANGLES, userData->groundNumIndices, GL_UNSIGNED_INT, (const void*)NULL );
 
-   // Draw the cube
+   // Draw the cube 渲染立方体
    // Load the vertex position
    glBindBuffer( GL_ARRAY_BUFFER, userData->cubePositionVBO );
-   glVertexAttribPointer ( POSITION_LOC, 3, GL_FLOAT, 
-                           GL_FALSE, 3 * sizeof(GLfloat), (const void*)NULL );
-   glEnableVertexAttribArray ( POSITION_LOC );   
+   //指定缓冲区中立方体顶点位置数据的格式，和数据偏移
+   glVertexAttribPointer ( POSITION_LOC, 3, GL_FLOAT,  GL_FALSE, 3 * sizeof(GLfloat), (const void*)NULL );
+   glEnableVertexAttribArray ( POSITION_LOC );  //使能顶点数组 
 
-   // Bind the index buffer
+   // Bind the index buffer  立方体顶点索引数据
    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, userData->cubeIndicesIBO );
 
-   // Load the MVP matrix for the cube model
+   // Load the MVP matrix for the cube model  加载立方体的MVP矩阵
    glUniformMatrix4fv ( mvpLoc, 1, GL_FALSE, (GLfloat*) &userData->cubeMvpMatrix.m[0][0] );
    glUniformMatrix4fv ( mvpLightLoc, 1, GL_FALSE, (GLfloat*) &userData->cubeMvpLightMatrix.m[0][0] );
 
-   // Set the cube color to red
+   // Set the cube color to red  设置立方体的颜色常量属性（红色）
    glVertexAttrib4f ( COLOR_LOC, 1.0f, 0.0f, 0.0f, 1.0f );
-
+   //渲染立方体
    glDrawElements ( GL_TRIANGLES, userData->cubeNumIndices, GL_UNSIGNED_INT, (const void*)NULL );
 }
 
@@ -426,51 +430,50 @@ void Draw ( ESContext *esContext )
 
    // Initialize matrices
    InitMVP ( esContext );
-
+   //查询默认的fbo
    glGetIntegerv ( GL_FRAMEBUFFER_BINDING, &defaultFramebuffer );
 
    // FIRST PASS: Render the scene from light position to generate the shadow map texture
    glBindFramebuffer ( GL_FRAMEBUFFER, userData->shadowMapBufferId );
 
-   // Set the viewport
+   // Set the viewport 视口（深度纹理的大小）
    glViewport ( 0, 0, userData->shadowMapTextureWidth, userData->shadowMapTextureHeight );
 
-   // clear depth buffer
+   // clear depth buffer 清楚深度缓冲区
    glClear( GL_DEPTH_BUFFER_BIT );
 
-   // disable color rendering, only write to depth buffer
+   // disable color rendering, only write to depth buffer 禁用颜色渲染
    glColorMask ( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
 
-   // reduce shadow rendering artifact
+   // reduce shadow rendering artifact 多边形偏移（增大写入纹理的深度值，以免因为精度问题而造成阴影的渲染伪像）
    glEnable ( GL_POLYGON_OFFSET_FILL );
    glPolygonOffset( 5.0f, 100.0f );
-
+   //第一遍渲染：从光源的角度渲染场景，将片段的深度值记录在一个纹理中
    glUseProgram ( userData->shadowMapProgramObject );
    DrawScene ( esContext, userData->shadowMapMvpLoc, userData->shadowMapMvpLightLoc );
 
-   glDisable( GL_POLYGON_OFFSET_FILL );
+   glDisable( GL_POLYGON_OFFSET_FILL );//禁用多边形偏移
 
    // SECOND PASS: Render the scene from eye location using the shadow map texture created in the first pass
-   glBindFramebuffer ( GL_FRAMEBUFFER, defaultFramebuffer );
-   glColorMask ( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+   glBindFramebuffer ( GL_FRAMEBUFFER, defaultFramebuffer );//默认的fbo
+   glColorMask ( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );//使能颜色渲染
 
-   // Set the viewport
+   // Set the viewport 视口（画面的大小）
    glViewport ( 0, 0, esContext->width, esContext->height );
    
    // Clear the color and depth buffers
-   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );
+   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );//清除fbo的颜色缓冲区和深度缓冲区
+   glClearColor ( 1.0f, 1.0f, 1.0f, 0.0f );//背景白色
 
    // Use the scene program object
    glUseProgram ( userData->sceneProgramObject );
 
    // Bind the shadow map texture
-   glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_2D, userData->shadowMapTextureId );
-
-   // Set the sampler texture unit to 0
+   glActiveTexture ( GL_TEXTURE0 );//激活纹理单元0
+   glBindTexture ( GL_TEXTURE_2D, userData->shadowMapTextureId );//把深度纹理绑定到纹理单元0
+   // Set the sampler texture unit to 0 设置采样器使用纹理单元0（深度纹理）
    glUniform1i ( userData->shadowMapSamplerLoc, 0 );
-
+   //第二遍渲染：从眼睛位置的角度渲染场景，到fbo0中
    DrawScene ( esContext, userData->sceneMvpLoc, userData->sceneMvpLightLoc );
 }
 
@@ -509,7 +512,7 @@ int esMain ( ESContext *esContext )
    {
       return GL_FALSE;
    }
-
+   //注册回调函数
    esRegisterShutdownFunc ( esContext, Shutdown );
    esRegisterDrawFunc ( esContext, Draw );
    
